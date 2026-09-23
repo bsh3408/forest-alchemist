@@ -545,7 +545,7 @@ $('student-login-form').addEventListener('submit',async e=>{
  button.disabled=true;button.textContent='확인 중…';$('login-error').textContent='';
  try{const student=await StudentGate.verify($('student-username').value,$('student-password').value);
  if(!student){$('login-error').textContent='아이디와 학번을 다시 확인해 주세요.';$('student-password').value='';$('student-password').focus();return;}
- if(window.SessionGuard&&(SessionGuard.isClosed()||(student.role!=='teacher'&&!SessionGuard.isOpen()))){$('login-error').textContent=SessionGuard.closedMessage();$('student-password').value='';return;}
+ if(window.SessionGuard&&!SessionGuard.isAllowed(student)&&(SessionGuard.isClosed(student)||(student.role!=='teacher'&&!SessionGuard.isOpen()))){$('login-error').textContent=SessionGuard.closedMessage();$('student-password').value='';return;}
  studentSession=student;$('student-password').value='';$('login-dialog').close();if(typeof sanctuaryRestore==='function'&&sanctuaryRestore(student)){render();canvas.focus({preventScroll:true});}else showNameDialog();
  }catch(error){$('login-error').textContent='로그인을 확인하지 못했습니다. 파일을 다시 열어 주세요.';}
  finally{button.disabled=false;button.textContent='연금술 여정 시작하기 →';}

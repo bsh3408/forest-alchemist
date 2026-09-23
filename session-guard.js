@@ -21,12 +21,15 @@ const HOURS={Mon:[510,960],Tue:[510,960],Wed:[510,1020],Thu:[510,1020],Fri:[510,
 // 선생님이 게임을 닫아 둘 때 true. 닫혀 있으면 교사 계정도 들어갈 수 없다.
 // 배포 폴더의 status.json({"closed":true/false})을 30초마다 다시 읽으므로, 이미 켜 둔 화면에도 곧바로 반영된다.
 const MANUAL_CLOSED=true;
-let closedNow=MANUAL_CLOSED;
+// 닫혀 있어도 들어갈 수 있는 아이디(status.json의 allow가 있으면 그것을 따른다)
+const MANUAL_ALLOW=['변석환5'];
+let closedNow=MANUAL_CLOSED,allowNow=MANUAL_ALLOW;
 const LEAVE_LOGOUT_EVERY=5; // 창 이탈 5회마다 강제 로그아웃
 const IDLE_LOGOUT_MS=15*60*1000,HIDDEN_LOGOUT_MS=5*60*1000;
 const MANUAL_MESSAGE='지금은 공방이 닫혀 있어요. 선생님이 다시 열 때까지 기다려 주세요.';
 const CLOSED_MESSAGE='지금은 이용 시간이 아니에요. 월·화·금 8:30~16:00, 수·목 8:30~17:00에 접속해 주세요(주말·공휴일 제외).';
-function isClosed(){return closedNow;}
+function isAllowed(account){return !!account&&allowNow.includes(String(account.username||'').normalize('NFC').trim());}
+function isClosed(account){return closedNow&&!isAllowed(account);}
 function closedMessage(){return closedNow?MANUAL_MESSAGE:CLOSED_MESSAGE;}
 function isOpen(now=new Date()){return !closedNow&&scheduleOpen(now);}
 function scheduleOpen(now=new Date()){
@@ -37,7 +40,7 @@ function scheduleOpen(now=new Date()){
  if(SCHOOL_HOLIDAYS.includes(`${get('year')}-${get('month')}-${get('day')}`))return false;
  return minutes>=hours[0]&&minutes<hours[1];
 }
-root.SessionGuard={isOpen,scheduleOpen,isClosed,closedMessage,get CLOSED_MESSAGE(){return closedMessage();}};
+root.SessionGuard={isOpen,scheduleOpen,isClosed,isAllowed,closedMessage,get CLOSED_MESSAGE(){return closedMessage();}};
 if(typeof document==='undefined'||typeof studentSession==='undefined')return;
 
 let leavingForLogout=false;
@@ -114,11 +117,12 @@ root.LeaveGuard={registerLeave,registerReturn,updateBadge};
 setInterval(updateBadge,1000);
 
 async function checkStatus(){
- try{const r=await fetch('status.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;const j=await r.json();closedNow=j.closed===true;}catch(e){}
+ try{const r=await fetch('status.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;const j=await r.json();closedNow=j.closed===true;if(Array.isArray(j.allow))allowNow=j.allow.map(x=>String(x).normalize('NFC').trim());}catch(e){}
  showClosedNote();enforce();
 }
 function enforce(){
  if(!studentSession)return;
+ if(isAllowed(studentSession))return;
  if(closedNow){logout('🕐 '+MANUAL_MESSAGE+' 오늘 진행한 내용은 저장됐어요.');return true;}
  if(studentSession.role!=='teacher'&&!isOpen()){logout('🕐 이용 시간이 끝나 공방 문을 닫습니다. 오늘 진행한 내용은 저장됐어요. 다음 이용 시간에 다시 만나요!');return true;}
 }
