@@ -483,7 +483,7 @@ function showSummary(feedback=''){
  if(state.phase==='end'&&businessClosingState!==state){businessClosingState=state;showBusinessNotice('close');}
 }
 
-function freshGame(){hideBusinessNotice();clearGatherDamage();stopForgeTiming();stopRoute();G.cancelSmelt(state);if(returnTimer)clearTimeout(returnTimer);returnTimer=null;const progress=state.sanctuary,day=state.day;state=G.newGame(day,0,12,undefined,state.treasures);state.sanctuary=progress;if(progress)progress.placedDay=0;state.student=studentSession?{...studentSession}:null;panel='';for(const id of ['restart-dialog','bench-dialog','utility-dialog','exhaustion-dialog'])if($(id).open)$(id).close();document.body.classList.remove('modal-open');render();say('처음 보는 시료가 있네요. 옆으로 이동해 조사하거나 시료를 클릭해 보세요.');showNameDialog();}
+function freshGame(){hideBusinessNotice();clearGatherDamage();stopForgeTiming();stopRoute();G.cancelSmelt(state);if(returnTimer)clearTimeout(returnTimer);returnTimer=null;const progress=state.sanctuary,day=state.day;state=G.newGame(1,0,12,undefined,state.treasures);state.sanctuary=progress;if(progress){progress.placedDay=0;progress.visitDay=0;progress.lastAttemptDay=progress.lastAttemptDay>=day?1:0;}state.student=studentSession?{...studentSession}:null;panel='';for(const id of ['restart-dialog','bench-dialog','utility-dialog','exhaustion-dialog'])if($(id).open)$(id).close();document.body.classList.remove('modal-open');render();say('처음 보는 시료가 있네요. 옆으로 이동해 조사하거나 시료를 클릭해 보세요.');showNameDialog();}
 $('restart').onclick=()=>{stopRoute();$('restart-dialog').showModal();};$('cancel-restart').onclick=()=>$('restart-dialog').close();$('confirm-restart').onclick=freshGame;
 
 function showExhaustion(){
@@ -545,6 +545,7 @@ $('student-login-form').addEventListener('submit',async e=>{
  button.disabled=true;button.textContent='확인 중…';$('login-error').textContent='';
  try{const student=await StudentGate.verify($('student-username').value,$('student-password').value);
  if(!student){$('login-error').textContent='아이디와 학번을 다시 확인해 주세요.';$('student-password').value='';$('student-password').focus();return;}
+ if(student.role!=='teacher'&&window.SessionGuard&&!SessionGuard.isOpen()){$('login-error').textContent=SessionGuard.CLOSED_MESSAGE;$('student-password').value='';return;}
  studentSession=student;$('student-password').value='';$('login-dialog').close();if(typeof sanctuaryRestore==='function'&&sanctuaryRestore(student)){render();canvas.focus({preventScroll:true});}else showNameDialog();
  }catch(error){$('login-error').textContent='로그인을 확인하지 못했습니다. 파일을 다시 열어 주세요.';}
  finally{button.disabled=false;button.textContent='연금술 여정 시작하기 →';}

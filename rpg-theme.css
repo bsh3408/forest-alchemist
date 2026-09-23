@@ -288,3 +288,5 @@ dialog::backdrop {background:#06121cb3;backdrop-filter:blur(2px)}
 @media(prefers-reduced-motion:reduce){.treasure-chest-art,.treasure-aura i{animation:none}}
 #mine-light{position:absolute;inset:0;z-index:3;pointer-events:none;background-repeat:no-repeat}
 #mine-light[hidden]{display:none}
+
+#student-login-form .service-hours-note{margin:0 0 4px;padding:8px 10px;border-radius:8px;background:#3a2a1466;color:#f3dfae;font-size:13px;line-height:1.6}
