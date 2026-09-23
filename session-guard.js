@@ -18,10 +18,13 @@ const SCHOOL_HOLIDAYS=[
 ];
 // 요일별 이용 시간(분 단위). 없는 요일(토·일)은 열리지 않는다.
 const HOURS={Mon:[510,960],Tue:[510,960],Wed:[510,1020],Thu:[510,1020],Fri:[510,960]};
+// 선생님이 게임을 잠시 닫아 둘 때 true. 다시 열 때 false로 바꾸면 위 시간표대로 열린다(교사 계정은 항상 입장 가능).
+const MANUAL_CLOSED=true;
 const LEAVE_LOGOUT_EVERY=5; // 창 이탈 5회마다 강제 로그아웃
 const IDLE_LOGOUT_MS=15*60*1000,HIDDEN_LOGOUT_MS=5*60*1000;
-const CLOSED_MESSAGE='지금은 이용 시간이 아니에요. 월·화·금 8:30~16:00, 수·목 8:30~17:00에 접속해 주세요(주말·공휴일 제외).';
-function isOpen(now=new Date()){
+const CLOSED_MESSAGE=MANUAL_CLOSED?'지금은 공방이 닫혀 있어요. 선생님이 다시 열 때까지 기다려 주세요.':'지금은 이용 시간이 아니에요. 월·화·금 8:30~16:00, 수·목 8:30~17:00에 접속해 주세요(주말·공휴일 제외).';
+function isOpen(now=new Date()){return !MANUAL_CLOSED&&scheduleOpen(now);}
+function scheduleOpen(now=new Date()){
  const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Seoul',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now);
  const get=t=>parts.find(p=>p.type===t).value;
  const hours=HOURS[get('weekday')],minutes=(+get('hour')%24)*60+(+get('minute'));
@@ -29,7 +32,7 @@ function isOpen(now=new Date()){
  if(SCHOOL_HOLIDAYS.includes(`${get('year')}-${get('month')}-${get('day')}`))return false;
  return minutes>=hours[0]&&minutes<hours[1];
 }
-root.SessionGuard={isOpen,CLOSED_MESSAGE};
+root.SessionGuard={isOpen,scheduleOpen,CLOSED_MESSAGE};
 if(typeof document==='undefined'||typeof studentSession==='undefined')return;
 
 let leavingForLogout=false;
@@ -110,7 +113,7 @@ try{const m=sessionStorage.getItem('alchemy.leaveLogout');if(m){sessionStorage.r
 setInterval(()=>{
  updateBadge();
  if(!studentSession){showClosedNote();return;}
- if(studentSession.role!=='teacher'&&!isOpen()){logout('🕐 이용 시간이 끝나 공방 문을 닫습니다. 오늘 진행한 내용은 저장됐어요. 다음 이용 시간에 다시 만나요!');return;}
+ if(studentSession.role!=='teacher'&&!isOpen()){logout(MANUAL_CLOSED?'🕐 '+CLOSED_MESSAGE+' 오늘 진행한 내용은 저장됐어요.':'🕐 이용 시간이 끝나 공방 문을 닫습니다. 오늘 진행한 내용은 저장됐어요. 다음 이용 시간에 다시 만나요!');return;}
  if(Date.now()-lastActivity>IDLE_LOGOUT_MS||(hiddenSince&&Date.now()-hiddenSince>HIDDEN_LOGOUT_MS))logout();
 },20000);
 })(typeof window==='undefined'?globalThis:window);
