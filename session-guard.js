@@ -18,12 +18,17 @@ const SCHOOL_HOLIDAYS=[
 ];
 // 요일별 이용 시간(분 단위). 없는 요일(토·일)은 열리지 않는다.
 const HOURS={Mon:[510,960],Tue:[510,960],Wed:[510,1020],Thu:[510,1020],Fri:[510,960]};
-// 선생님이 게임을 잠시 닫아 둘 때 true. 다시 열 때 false로 바꾸면 위 시간표대로 열린다(교사 계정은 항상 입장 가능).
+// 선생님이 게임을 닫아 둘 때 true. 닫혀 있으면 교사 계정도 들어갈 수 없다.
+// 배포 폴더의 status.json({"closed":true/false})을 30초마다 다시 읽으므로, 이미 켜 둔 화면에도 곧바로 반영된다.
 const MANUAL_CLOSED=true;
+let closedNow=MANUAL_CLOSED;
 const LEAVE_LOGOUT_EVERY=5; // 창 이탈 5회마다 강제 로그아웃
 const IDLE_LOGOUT_MS=15*60*1000,HIDDEN_LOGOUT_MS=5*60*1000;
-const CLOSED_MESSAGE=MANUAL_CLOSED?'지금은 공방이 닫혀 있어요. 선생님이 다시 열 때까지 기다려 주세요.':'지금은 이용 시간이 아니에요. 월·화·금 8:30~16:00, 수·목 8:30~17:00에 접속해 주세요(주말·공휴일 제외).';
-function isOpen(now=new Date()){return !MANUAL_CLOSED&&scheduleOpen(now);}
+const MANUAL_MESSAGE='지금은 공방이 닫혀 있어요. 선생님이 다시 열 때까지 기다려 주세요.';
+const CLOSED_MESSAGE='지금은 이용 시간이 아니에요. 월·화·금 8:30~16:00, 수·목 8:30~17:00에 접속해 주세요(주말·공휴일 제외).';
+function isClosed(){return closedNow;}
+function closedMessage(){return closedNow?MANUAL_MESSAGE:CLOSED_MESSAGE;}
+function isOpen(now=new Date()){return !closedNow&&scheduleOpen(now);}
 function scheduleOpen(now=new Date()){
  const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Seoul',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now);
  const get=t=>parts.find(p=>p.type===t).value;
@@ -32,7 +37,7 @@ function scheduleOpen(now=new Date()){
  if(SCHOOL_HOLIDAYS.includes(`${get('year')}-${get('month')}-${get('day')}`))return false;
  return minutes>=hours[0]&&minutes<hours[1];
 }
-root.SessionGuard={isOpen,scheduleOpen,CLOSED_MESSAGE};
+root.SessionGuard={isOpen,scheduleOpen,isClosed,closedMessage,get CLOSED_MESSAGE(){return closedMessage();}};
 if(typeof document==='undefined'||typeof studentSession==='undefined')return;
 
 let leavingForLogout=false;
@@ -47,7 +52,7 @@ function showClosedNote(){
  let note=document.getElementById('service-hours-note');
  if(isOpen()){if(note)note.remove();return;}
  if(!note){note=document.createElement('p');note.id='service-hours-note';note.className='service-hours-note';form.prepend(note);}
- note.textContent='🕐 '+CLOSED_MESSAGE;
+ note.textContent='🕐 '+closedMessage();
 }
 let lastActivity=Date.now(),hiddenSince=null;
 const mark=()=>{lastActivity=Date.now();};
@@ -108,12 +113,22 @@ document.addEventListener('paste',e=>{if(studentSession&&e.target?.closest?.('#u
 root.LeaveGuard={registerLeave,registerReturn,updateBadge};
 setInterval(updateBadge,1000);
 
+async function checkStatus(){
+ try{const r=await fetch('status.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;const j=await r.json();closedNow=j.closed===true;}catch(e){}
+ showClosedNote();enforce();
+}
+function enforce(){
+ if(!studentSession)return;
+ if(closedNow){logout('🕐 '+MANUAL_MESSAGE+' 오늘 진행한 내용은 저장됐어요.');return true;}
+ if(studentSession.role!=='teacher'&&!isOpen()){logout('🕐 이용 시간이 끝나 공방 문을 닫습니다. 오늘 진행한 내용은 저장됐어요. 다음 이용 시간에 다시 만나요!');return true;}
+}
+checkStatus();setInterval(checkStatus,30000);
 showClosedNote();
 try{const m=sessionStorage.getItem('alchemy.leaveLogout');if(m){sessionStorage.removeItem('alchemy.leaveLogout');const el=byId('login-error');if(el)el.textContent='⚠ '+m;}}catch(e){}
 setInterval(()=>{
  updateBadge();
  if(!studentSession){showClosedNote();return;}
- if(studentSession.role!=='teacher'&&!isOpen()){logout(MANUAL_CLOSED?'🕐 '+CLOSED_MESSAGE+' 오늘 진행한 내용은 저장됐어요.':'🕐 이용 시간이 끝나 공방 문을 닫습니다. 오늘 진행한 내용은 저장됐어요. 다음 이용 시간에 다시 만나요!');return;}
+ if(enforce())return;
  if(Date.now()-lastActivity>IDLE_LOGOUT_MS||(hiddenSince&&Date.now()-hiddenSince>HIDDEN_LOGOUT_MS))logout();
 },20000);
 })(typeof window==='undefined'?globalThis:window);
