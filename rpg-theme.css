@@ -290,3 +290,6 @@ dialog::backdrop {background:#06121cb3;backdrop-filter:blur(2px)}
 #mine-light[hidden]{display:none}
 
 #student-login-form .service-hours-note{margin:0 0 4px;padding:8px 10px;border-radius:8px;background:#3a2a1466;color:#f3dfae;font-size:13px;line-height:1.6}
+.leave-badge{align-self:center;margin-left:auto;margin-right:10px;padding:4px 10px;border-radius:999px;border:1px solid #c9b27a66;background:#1d2a2366;color:#e9dcb4;font-size:12px;white-space:nowrap}
+.leave-badge.warn{border-color:#d9826a;background:#5a241a99;color:#ffd9cc}
+.leave-warning{margin:6px 0 0;color:#e7a58f;font-size:12.5px;font-weight:700}

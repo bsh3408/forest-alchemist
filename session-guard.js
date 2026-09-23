@@ -30,7 +30,9 @@ function isOpen(now=new Date()){
 root.SessionGuard={isOpen,CLOSED_MESSAGE};
 if(typeof document==='undefined'||typeof studentSession==='undefined')return;
 
+let leavingForLogout=false;
 function logout(message){
+ leavingForLogout=true;
  if(typeof sanctuarySave==='function')sanctuarySave();
  if(message)alert(message);
  location.reload();
@@ -46,8 +48,60 @@ let lastActivity=Date.now(),hiddenSince=null;
 const mark=()=>{lastActivity=Date.now();};
 ['click','keydown','touchstart','pointerdown'].forEach(ev=>document.addEventListener(ev,mark,{passive:true}));
 document.addEventListener('visibilitychange',()=>{if(document.hidden)hiddenSince=Date.now();else{const away=hiddenSince?Date.now()-hiddenSince:0;hiddenSince=null;mark();if(studentSession&&away>HIDDEN_LOGOUT_MS)logout();}});
+
+/* 창 이탈 감지(AI 등 다른 창 사용 방지)
+   - 로그인한 뒤 게임 창을 벗어날 때마다(다른 탭·다른 프로그램·창 최소화) 횟수와 누적 시간을 state.integrity에 저장한다.
+   - 특별의뢰 문제를 푸는 중에 벗어나면 그 의뢰는 오답 처리되고 손님이 떠난다.
+   - 최종 시련을 푸는 중에 벗어나면 오늘의 도전이 오답으로 기록된다(다음 날 새 문제로 재도전).
+   - 답안 칸에는 붙여넣기를 막는다. 기록은 클리어 화면에 함께 표시된다. */
+let leftAt=null,lastLeave=0,pendingNotice='';
+const byId=id=>document.getElementById(id);
+function integrity(){if(!state.integrity)state.integrity={leaves:0,awayMs:0,log:[]};return state.integrity;}
+function updateBadge(){const b=byId('leave-badge');if(!b)return;const n=studentSession?integrity().leaves:0;b.hidden=!studentSession;b.textContent='창 이탈 '+n+'회';b.classList.toggle('warn',n>0);}
+function activeProblem(){
+ if(!byId('utility-dialog')?.open)return null;
+ const trial=byId('trial-answer');if(trial&&!trial.disabled)return 'final';
+ const quest=byId('quest-submit');if(quest&&!quest.disabled&&window.activeQuestKey)return 'quest';
+ return null;
+}
+function penalize(kind){
+ if(kind==='final'){
+  const p=state.sanctuary;if(!p||p.finalPassed||p.lastAttemptDay>=state.day)return;
+  const q=Sanctuary.question(p);p.lastAttemptDay=state.day;p.history.push({day:state.day,questionId:q.id,passed:false,leftWindow:true});p.attempt++;
+  if(typeof closeUtility==='function')closeUtility();
+  pendingNotice='최종 시련 풀이 중 창을 벗어나서 오늘의 도전은 오답으로 처리됐어요. 다음 날 새 문제로 다시 도전하세요.';
+ }else if(kind==='quest'){
+  const key=window.activeQuestKey,q=Sanctuary.quest(state.sanctuary,key);if(!q)return;
+  const r=Sanctuary.submitQuest(state,key,typeof q.answer==='number'?'-999999':'__left_window__');
+  window.activeQuestKey=null;if(typeof closeUtility==='function')closeUtility();
+  if(r.attempted&&r.departingGuest&&typeof showAngryDeparture==='function')showAngryDeparture(r);
+  pendingNotice='특별의뢰 풀이 중 창을 벗어나서 이번 의뢰는 오답으로 처리됐어요.';
+ }
+}
+function registerLeave(){
+ if(!studentSession||leavingForLogout||leftAt)return;
+ const now=Date.now();if(now-lastLeave<400)return;lastLeave=now;leftAt=now;
+ const rec=integrity(),kind=activeProblem();rec.leaves++;rec.log.push({day:state.day,at:new Date(now).toISOString(),during:kind||'play'});if(rec.log.length>200)rec.log.shift();
+ if(kind)penalize(kind);
+ if(typeof render==='function')render();
+ updateBadge();if(typeof sanctuarySave==='function')sanctuarySave();
+}
+function registerReturn(){
+ if(!leftAt)return;
+ if(studentSession){integrity().awayMs+=Date.now()-leftAt;if(typeof sanctuarySave==='function')sanctuarySave();}
+ leftAt=null;
+ if(pendingNotice){const m=pendingNotice;pendingNotice='';setTimeout(()=>{leavingForLogout=true;alert('⚠ '+m);leavingForLogout=false;},50);}
+}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)registerLeave();else registerReturn();});
+root.addEventListener('blur',registerLeave);
+root.addEventListener('focus',registerReturn);
+document.addEventListener('paste',e=>{if(studentSession&&e.target?.closest?.('#utility-dialog, #bench-dialog')){e.preventDefault();const b=byId('leave-badge');if(b){b.textContent='붙여넣기 차단됨';setTimeout(updateBadge,1200);}}},true);
+root.LeaveGuard={registerLeave,registerReturn,updateBadge};
+setInterval(updateBadge,1000);
+
 showClosedNote();
 setInterval(()=>{
+ updateBadge();
  if(!studentSession){showClosedNote();return;}
  if(studentSession.role!=='teacher'&&!isOpen()){logout('🕐 오후 5시가 되어 공방 문을 닫습니다. 오늘 진행한 내용은 저장됐어요. 다음 이용 시간에 다시 만나요!');return;}
  if(Date.now()-lastActivity>IDLE_LOGOUT_MS||(hiddenSince&&Date.now()-hiddenSince>HIDDEN_LOGOUT_MS))logout();

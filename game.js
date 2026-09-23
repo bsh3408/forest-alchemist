@@ -483,7 +483,7 @@ function showSummary(feedback=''){
  if(state.phase==='end'&&businessClosingState!==state){businessClosingState=state;showBusinessNotice('close');}
 }
 
-function freshGame(){hideBusinessNotice();clearGatherDamage();stopForgeTiming();stopRoute();G.cancelSmelt(state);if(returnTimer)clearTimeout(returnTimer);returnTimer=null;const progress=state.sanctuary,day=state.day;state=G.newGame(1,0,12,undefined,state.treasures);state.sanctuary=progress;if(progress){progress.placedDay=0;progress.visitDay=0;progress.lastAttemptDay=progress.lastAttemptDay>=day?1:0;}state.student=studentSession?{...studentSession}:null;panel='';for(const id of ['restart-dialog','bench-dialog','utility-dialog','exhaustion-dialog'])if($(id).open)$(id).close();document.body.classList.remove('modal-open');render();say('처음 보는 시료가 있네요. 옆으로 이동해 조사하거나 시료를 클릭해 보세요.');showNameDialog();}
+function freshGame(){hideBusinessNotice();clearGatherDamage();stopForgeTiming();stopRoute();G.cancelSmelt(state);if(returnTimer)clearTimeout(returnTimer);returnTimer=null;const progress=state.sanctuary,day=state.day,integrity=state.integrity;state=G.newGame(1,0,12,undefined,state.treasures);state.sanctuary=progress;if(integrity)state.integrity=integrity;if(progress){if(!progress.finalPassed){progress.relics={};progress.opened=false;}progress.placedDay=0;progress.visitDay=0;progress.lastAttemptDay=progress.lastAttemptDay>=day?1:0;}state.student=studentSession?{...studentSession}:null;panel='';for(const id of ['restart-dialog','bench-dialog','utility-dialog','exhaustion-dialog'])if($(id).open)$(id).close();document.body.classList.remove('modal-open');render();say('처음 보는 시료가 있네요. 옆으로 이동해 조사하거나 시료를 클릭해 보세요.');showNameDialog();}
 $('restart').onclick=()=>{stopRoute();$('restart-dialog').showModal();};$('cancel-restart').onclick=()=>$('restart-dialog').close();$('confirm-restart').onclick=freshGame;
 
 function showExhaustion(){
@@ -559,7 +559,7 @@ async function showClearance(){
  $('clearance-account').textContent='아이디 · '+studentSession.username;
  $('clearance-code').textContent=record.code;
  $('clearance-status').textContent=preview?'교사용 테스트 코드입니다. 수행평가에는 사용할 수 없습니다.':'최종 시련을 통과했습니다. 현재 코드는 로컬 기록용이며 연구소 서버 인증은 아직 연결되지 않았습니다.';
- $('clearance-feedback').textContent='';$('clearance-dialog').showModal();
+ const leave=state.integrity||{};$('clearance-status').textContent+=' · 창 이탈 '+(leave.leaves||0)+'회(누적 '+Math.round((leave.awayMs||0)/1000)+'초)';$('clearance-feedback').textContent='';$('clearance-dialog').showModal();
  }catch(e){state.clearancePresented=false;say('클리어 코드를 저장하지 못했습니다. 브라우저 저장 공간을 확인한 뒤 다시 시도해 주세요.',false,false);}
  finally{clearanceBusy=false;}
 }
