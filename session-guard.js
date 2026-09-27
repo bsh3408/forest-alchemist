@@ -20,7 +20,7 @@ const SCHOOL_HOLIDAYS=[
 const HOURS={Mon:[510,960],Tue:[510,960],Wed:[510,1020],Thu:[510,1020],Fri:[510,960]};
 // 선생님이 게임을 닫아 둘 때 true. 닫혀 있으면 교사 계정도 들어갈 수 없다.
 // 배포 폴더의 status.json({"closed":true/false})을 30초마다 다시 읽으므로, 이미 켜 둔 화면에도 곧바로 반영된다.
-const MANUAL_CLOSED=true;
+const MANUAL_CLOSED=false;
 // 닫혀 있어도 들어갈 수 있는 아이디(status.json의 allow가 있으면 그것을 따른다)
 const MANUAL_ALLOW=['변석환5'];
 let closedNow=MANUAL_CLOSED,allowNow=MANUAL_ALLOW;
