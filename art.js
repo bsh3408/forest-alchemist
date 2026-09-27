@@ -26,22 +26,17 @@ function sheetBounds(im,cols,rows,world=false){
 }
 function artProp(key,x,y,w,h){if(key in WORLD_CELLS)return artCell('world',WORLD_CELLS[key],4,3,x,y,w,h);if(key==='bottle'||key==='furnace')return artCell('utility',key==='bottle'?0:1,4,2,x,y,w,h);return false;}
 function artCrop(img,index,cols,rows){const c=document.createElement('canvas');c.width=Math.floor(img.naturalWidth/cols);c.height=Math.floor(img.naturalHeight/rows);c.getContext('2d').drawImage(img,index%cols*img.naturalWidth/cols,Math.floor(index/cols)*img.naturalHeight/rows,img.naturalWidth/cols,img.naturalHeight/rows,0,0,c.width,c.height);return c.toDataURL?.('image/png')||'';}
-// Crop transparent margins so every portrait rests on the same counter baseline.
+// Portrait atlases have isolated, padded cells. Keep the whole horizontal frame
+// (including disconnected hands/highlights), trimming only the empty bottom.
 function portraitCrop(img,index,cols,rows){
- const cw=img.naturalWidth/cols,ch=img.naturalHeight/rows,pad=Math.ceil(cw*.10),sx=Math.max(0,Math.floor(index%cols*cw)-pad),sy=Math.floor(index/cols)*ch,right=Math.min(img.naturalWidth,Math.ceil((index%cols+1)*cw)+pad);
- const c=document.createElement('canvas'),w=c.width=right-sx,h=c.height=Math.floor(ch),pen=c.getContext('2d');
- pen.drawImage(img,sx,sy,w,h,0,0,w,h);
+ const cw=img.naturalWidth/cols,ch=img.naturalHeight/rows,sx=Math.floor(index%cols*cw),sy=Math.floor(index/cols)*ch;
+ const c=document.createElement('canvas'),w=c.width=Math.floor(cw),h=c.height=Math.floor(ch),pen=c.getContext('2d');
+ pen.drawImage(img,sx,sy,cw,ch,0,0,w,h);
  const pixels=pen.getImageData(0,0,w,h);if(!pixels?.data)return artCrop(img,index,cols,rows);
- // A neighbouring sprite can spill across a generated sheet cell. Retain only
- // the main connected character, never a sliver from the adjacent person.
- const d=pixels.data,seen=new Uint8Array(w*h),queue=new Int32Array(w*h);let largest=[];
- for(let start=0;start<w*h;start++){if(seen[start]||d[start*4+3]<100)continue;let head=0,tail=1;queue[0]=start;seen[start]=1;
- while(head<tail){const at=queue[head++],x=at%w,y=Math.floor(at/w);for(const n of [x?at-1:-1,x<w-1?at+1:-1,y?at-w:-1,y<h-1?at+w:-1])if(n>=0&&!seen[n]&&d[n*4+3]>=100){seen[n]=1;queue[tail++]=n;}}
- if(tail>largest.length)largest=Array.from(queue.subarray(0,tail));}
- if(!largest.length)return artCrop(img,index,cols,rows);
- const keep=new Uint8Array(w*h);let l=w,t=h,r=0,b=0;for(const at of largest){keep[at]=1;const x=at%w,y=Math.floor(at/w);l=Math.min(l,x);r=Math.max(r,x);t=Math.min(t,y);b=Math.max(b,y);}
- for(let i=0;i<w*h;i++)if(!keep[i])d[i*4+3]=0;pen.putImageData(pixels,0,0);
- const out=document.createElement('canvas');out.width=r-l+1;out.height=b-t+1;out.getContext('2d').drawImage(c,l,t,out.width,out.height,0,0,out.width,out.height);return out.toDataURL('image/png');
+ const d=pixels.data;let bottom=0;
+ for(let y=h-1;y>=0&&!bottom;y--)for(let x=0;x<w;x++)if(d[(y*w+x)*4+3]>20){bottom=y+1;break;}
+ if(!bottom)return artCrop(img,index,cols,rows);
+ const out=document.createElement('canvas');out.width=w;out.height=bottom;out.getContext('2d').drawImage(c,0,0,w,bottom,0,0,w,bottom);return out.toDataURL('image/png');
 }
 function inspectionArt(n){
  REDRAW.inspection??={};if(REDRAW.inspection[n.item])return REDRAW.inspection[n.item];
@@ -84,7 +79,9 @@ function startRedrawnArt(){
  const ready=new Set();
  for(const key of ['world','terrain','items','effects','walk','walk-female','heroes','guests','guests-angry','guests-happy','smith-reactions','noble-guests','shop','utility']){
   const im=new Image();REDRAW.images[key]=im;
-  let keyed=false,packed=false;
+  // These atlases already have genuine alpha and safe cell gutters. Never
+  // color-key their pale sleeves/hair or reconstruct their connected parts.
+  let keyed=['guests','guests-angry','guests-happy','smith-reactions','noble-guests','heroes'].includes(key),packed=false;
   im.onload=()=>{
    if(key==='noble-guests'&&!keyed){keyed=true;const c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;const pen=c.getContext('2d');pen.drawImage(im,0,0);const p=pen.getImageData(0,0,c.width,c.height);if(p?.data){for(let i=0;i<p.data.length;i+=4){const d=p.data;if(d[i]>130&&d[i+2]>130&&d[i+1]<Math.min(d[i],d[i+2])*.65)d[i+3]=0;}pen.putImageData(p,0,0);im.src=c.toDataURL('image/png');return;}}
    if(!keyed&&!['terrain','shop','utility','heroes'].includes(key)){keyed=true;const clean=clearPreviewMatte(im);if(clean){im.src=clean;return;}}

@@ -199,7 +199,7 @@ function contextTarget(){
 }
 function render(){
  if(typeof sanctuarySync==='function')sanctuarySync();
- if(window.Clearance){const teacher=studentSession?.role==='teacher',complete=Clearance.qualified(state,studentSession);$('clearance-open').hidden=!(teacher||complete);$('clearance-open').textContent=teacher?'클리어 코드 미리보기':'클리어 코드';if(complete&&!state.clearancePresented){state.clearancePresented=true;showClearance();}}
+ if(window.Clearance){const teacher=studentSession?.role==='teacher',complete=Clearance.qualified(state,studentSession);$('clearance-open').hidden=!(teacher||complete);$('clearance-open').textContent=teacher?'클리어 코드 미리보기':'클리어 코드';if(complete&&!state.clearancePresented&&!window.sanctuaryCelebrating){state.clearancePresented=true;showClearance();}}
 
  $('brand-name').textContent=state.shopName?state.shopName+'의 연금술 상점':'숲속 연금술사';
  const morning=state.phase==='morning';$('mine-light').hidden=!morning||state.area!=='mine';$('day').textContent=`${state.day}일차 · ${morning?(state.supplemental?'보충 탐사':'오전 탐사'):state.phase==='shop'?'오후 영업':'하루 마감'}`;
@@ -290,8 +290,8 @@ document.addEventListener('keydown',e=>{
 document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>manualMove(...b.dataset.dir.split(',').map(Number)));
 $('bag-button').onclick=()=>{if(damagePending||$('business-announcement').open)return;if($('login-dialog').open)return;if($('name-dialog').open)return;if(!$('exhaustion-dialog').open&&!$('bench-dialog').open&&!$('restart-dialog').open){if($('utility-dialog').open&&panel==='bag')closeUtility();else if(!$('utility-dialog').open)openBag();}};
 $('return-scroll').onclick=()=>{if(damagePending||$('business-announcement').open)return;stopRoute();notify(G.useReturnScroll(state));};$('emergency').onclick=$('return-scroll').onclick;$('resupply-trip').onclick=()=>{stopRoute();notify(G.resumeExploration(state));};
-function utility(kind,title,kicker){stopRoute();panel=kind;$('utility-dialog').dataset.kind=kind;$('utility-title').textContent=title;$('utility-kicker').textContent=kicker;if(!$('utility-dialog').open){document.body.classList.add('modal-open');$('utility-dialog').showModal();}}
-function closeUtility(){stopForgeTiming();G.cancelInspection(state);G.cancelSmelt(state);panel='';$('utility-dialog').close();document.body.classList.remove('modal-open');render();canvas.focus({preventScroll:true});}
+function utility(kind,title,kicker){if(typeof cancelSanctuaryTransition==='function')cancelSanctuaryTransition();stopRoute();panel=kind;$('utility-dialog').dataset.kind=kind;$('utility-title').textContent=title;$('utility-kicker').textContent=kicker;if(!$('utility-dialog').open){document.body.classList.add('modal-open');$('utility-dialog').showModal();}}
+function closeUtility(){if(typeof cancelSanctuaryTransition==='function')cancelSanctuaryTransition();stopForgeTiming();G.cancelInspection(state);G.cancelSmelt(state);panel='';$('utility-dialog').close();document.body.classList.remove('modal-open');render();canvas.focus({preventScroll:true});}
 $('close-utility').onclick=closeUtility;$('utility-dialog').addEventListener('cancel',e=>{e.preventDefault();closeUtility();});
 function bagItems(values,aqueous=false){const entries=Object.entries(values).filter(([,v])=>v>0);if(!entries.length)return '<p class="empty-bag">아직 보관한 재료가 없어요.</p>';return `<div class="bag-list">${entries.map(([k,v])=>{const item=G.ITEMS[k];return `<div class="bag-item">${itemSprite(k)}<div><b>${item.formula}(${aqueous?'aq':item.form||'s'})</b><small>${item.name}${aqueous?' 수용액':''}</small></div><strong>×${v}${!aqueous&&state.phase!=='morning'&&state.premium[k]?'<small>고순도 '+state.premium[k]+'</small>':''}</strong></div>`;}).join('')}</div>`;}
 function openBag(){
@@ -483,7 +483,7 @@ function showSummary(feedback=''){
  if(state.phase==='end'&&businessClosingState!==state){businessClosingState=state;showBusinessNotice('close');}
 }
 
-function freshGame(){hideBusinessNotice();clearGatherDamage();stopForgeTiming();stopRoute();G.cancelSmelt(state);if(returnTimer)clearTimeout(returnTimer);returnTimer=null;const progress=state.sanctuary,day=state.day,integrity=state.integrity;state=G.newGame(1,0,12,undefined,state.treasures);state.sanctuary=progress;if(integrity)state.integrity=integrity;if(progress){if(!progress.finalPassed){progress.relics={};progress.opened=false;}progress.placedDay=0;progress.visitDay=0;progress.lastAttemptDay=progress.lastAttemptDay>=day?1:0;}state.student=studentSession?{...studentSession}:null;panel='';for(const id of ['restart-dialog','bench-dialog','utility-dialog','exhaustion-dialog'])if($(id).open)$(id).close();document.body.classList.remove('modal-open');render();say('처음 보는 시료가 있네요. 옆으로 이동해 조사하거나 시료를 클릭해 보세요.');showNameDialog();}
+function freshGame(){if(typeof cancelSanctuaryTransition==='function')cancelSanctuaryTransition();hideBusinessNotice();clearGatherDamage();stopForgeTiming();stopRoute();G.cancelSmelt(state);if(returnTimer)clearTimeout(returnTimer);returnTimer=null;const progress=state.sanctuary,day=state.day,integrity=state.integrity;state=G.newGame(1,0,12,undefined,state.treasures);state.sanctuary=progress;if(integrity)state.integrity=integrity;if(progress){if(!progress.finalPassed){progress.relics={};progress.opened=false;}progress.placedDay=0;progress.visitDay=0;progress.lastAttemptDay=progress.lastAttemptDay>=day?1:0;}state.student=studentSession?{...studentSession}:null;panel='';for(const id of ['restart-dialog','bench-dialog','utility-dialog','exhaustion-dialog'])if($(id).open)$(id).close();document.body.classList.remove('modal-open');render();say('처음 보는 시료가 있네요. 옆으로 이동해 조사하거나 시료를 클릭해 보세요.');showNameDialog();}
 $('restart').onclick=()=>{stopRoute();$('restart-dialog').showModal();};$('cancel-restart').onclick=()=>$('restart-dialog').close();$('confirm-restart').onclick=freshGame;
 
 function showExhaustion(){
@@ -555,10 +555,10 @@ let clearanceBusy=false;
 async function showClearance(){
  if(clearanceBusy)return;clearanceBusy=true;
  try{const preview=studentSession?.role==='teacher';const record=preview?Clearance.preview():await Clearance.issue(state,studentSession);
- $('clearance-title').textContent=preview?'클리어 화면 미리보기':'균형의 연금술사';
+ $('clearance-title').textContent=preview?'클리어 화면 미리보기':'3가지 시련 완수';$('clearance-dialog').classList.add('trial-code-reveal');
  $('clearance-account').textContent='아이디 · '+studentSession.username;
  $('clearance-code').textContent=record.code;
- $('clearance-status').textContent=preview?'교사용 테스트 코드입니다. 수행평가에는 사용할 수 없습니다.':'최종 시련을 통과했습니다. 현재 코드는 로컬 기록용이며 연구소 서버 인증은 아직 연결되지 않았습니다.';
+ $('clearance-status').textContent=preview?'교사용 테스트 코드입니다. 수행평가에는 사용할 수 없습니다.':'3가지 시련을 모두 통과했습니다. 현재 코드는 로컬 기록용이며 연구소 서버 인증은 아직 연결되지 않았습니다.';
  const leave=state.integrity||{};$('clearance-status').textContent+=' · 창 이탈 '+(leave.leaves||0)+'회(누적 '+Math.round((leave.awayMs||0)/1000)+'초)';$('clearance-feedback').textContent='';$('clearance-dialog').showModal();
  }catch(e){state.clearancePresented=false;say('클리어 코드를 저장하지 못했습니다. 브라우저 저장 공간을 확인한 뒤 다시 시도해 주세요.',false,false);}
  finally{clearanceBusy=false;}

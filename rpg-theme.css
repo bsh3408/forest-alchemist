@@ -286,6 +286,50 @@ dialog::backdrop {background:#06121cb3;backdrop-filter:blur(2px)}
 @keyframes treasure-reveal{from{opacity:0;transform:translateY(10px) scale(.85)}to{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes treasure-spark{0%,100%{opacity:.25;transform:scale(.65)}50%{opacity:.95;transform:scale(1.15)}}
 @media(prefers-reduced-motion:reduce){.treasure-chest-art,.treasure-aura i{animation:none}}
+
+/* Three sanctuary seals: drawn in SVG, with a single pulse rather than repeated flashes. */
+.trial-progress{list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:0;margin:0 0 25px}
+.trial-progress li{display:flex;align-items:center;justify-content:center;gap:10px;min-width:0;padding:12px 8px;border:1px solid #566455;background:#20362c;color:#a5b19f}
+.trial-progress-gem{display:grid;place-items:center;flex:0 0 31px;width:31px;height:35px;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);background:#405347;color:#c3ccba;font:700 16px Georgia,serif}
+.trial-progress li>span:last-child{font-size:13px;font-weight:700;line-height:1.5}.trial-progress small{display:block;font-size:10px;font-weight:400;margin-top:3px;letter-spacing:.05em}
+.trial-progress .current{background:#344832;border-color:#c1ad71;color:#f0dfad;box-shadow:inset 0 0 15px #c7b37312}
+.trial-progress .current .trial-progress-gem{background:#8b8052;color:#fff3ce}
+.trial-progress .passed{border-color:#6d9278;color:#cfe4bd;background:#2a4435}.trial-progress .passed .trial-progress-gem{background:#627f57;color:#f5e7b4}
+.trial-verdict{--seal:#e0c784;position:relative;isolation:isolate;overflow:hidden;padding:6px 0 28px;text-align:center;color:#e9e1c8;min-height:460px}
+.trial-verdict .trial-progress{text-align:left;margin-bottom:12px}.trial-verdict>p:not(.trial-verdict-kicker){max-width:420px;margin:13px auto 0;font-size:14px;line-height:1.9;word-break:keep-all;color:#c4d0b9;padding:0 12px}
+.trial-verdict h3{font-size:28px;font-weight:700;letter-spacing:.04em;line-height:1.5;color:#f4e6b6;margin:0}.trial-verdict .trial-verdict-kicker{font-size:11px;letter-spacing:.3em;color:#c6b375;margin:0 0 10px}
+.trial-verdict>button{margin:23px auto 0;min-width:190px}.trial-verdict .trial-kept{color:#dbcb99;font-size:12px}
+.trial-seal{width:240px;height:240px;position:relative;margin:15px auto 8px;color:var(--seal)}
+.trial-seal svg{position:relative;width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.5;z-index:1;filter:drop-shadow(0 0 5px #dfce8555)}
+.trial-seal .trial-orbit{transform-origin:120px 120px;animation:trial-orbit-open 1.25s cubic-bezier(.16,.7,.3,1) both}.trial-seal .trial-orbit circle{stroke-dasharray:5 7;stroke-width:2}
+.trial-seal .trial-triangle{stroke-width:1;opacity:.6}.trial-seal .trial-rune{stroke-width:2}.trial-seal .trial-center{fill:currentColor;stroke:none}
+.trial-aura,.trial-wave{position:absolute;pointer-events:none;border-radius:50%;inset:12%;background:radial-gradient(circle,#f1d08233,transparent 69%)}
+.trial-aura{animation:trial-aura-open 1.3s ease-out both}.trial-wave{inset:20%;background:none;border:1px solid #e3d395;animation:trial-wave-open 1.25s ease-out both}
+.trial-spark{position:absolute;left:50%;top:50%;width:4px;height:9px;background:#e5d499;box-shadow:0 0 8px #e3d287;opacity:0;transform:translate(-50%,-50%);animation:trial-spark-open 1.05s ease-out var(--delay) both}
+.trial-transition-track{height:2px;width:150px;margin:25px auto 0;background:#455641;overflow:hidden}.trial-transition-track i{display:block;width:100%;height:100%;background:#d7ca91;transform-origin:left;animation:trial-transition 1.3s linear both}
+.trial-verdict.complete{--seal:#f1d992;background:radial-gradient(ellipse at 50% 35%,#776a312e,transparent 65%)}
+.trial-verdict.complete .trial-seal{filter:drop-shadow(0 0 15px #efcd6244)}.trial-verdict.complete .trial-transition-track i{animation-duration:1.9s}
+.trial-verdict.failure{--seal:#b9856c}.trial-verdict.failure h3{color:#edc7aa}.trial-verdict.failure .trial-verdict-kicker{color:#bc9875}
+.trial-verdict.failure .trial-seal{animation:trial-seal-fracture .65s ease-out both}
+.trial-verdict.failure .trial-aura{background:radial-gradient(circle,#a6674a38,transparent 65%)}.trial-verdict.failure .trial-orbit{animation:trial-orbit-close .8s ease-out both}
+.trial-verdict.failure .trial-wave{border-color:#b58063;animation:trial-wave-close .65s ease-out both}.trial-verdict.failure .trial-spark{background:#ba8f6e;box-shadow:none;animation-name:trial-shard-fall}
+.trial-verdict.failure .trial-crack{stroke:#e7b397;stroke-width:3;stroke-dasharray:290;animation:trial-crack-draw .6s ease-out both}.trial-verdict.failure .trial-center{opacity:.35}
+.trial-verdict.settled .trial-seal *,.trial-verdict.settled .trial-seal{animation:none}.trial-verdict.settled .trial-wave,.trial-verdict.settled .trial-spark{display:none}.trial-verdict.settled .trial-seal{opacity:.75}
+@keyframes trial-orbit-open{from{transform:rotate(-28deg) scale(.85);opacity:.2}to{transform:rotate(0) scale(1);opacity:1}}
+@keyframes trial-aura-open{0%{opacity:0;transform:scale(.5)}40%{opacity:1;transform:scale(1.2)}100%{opacity:.65;transform:scale(1)}}
+@keyframes trial-wave-open{0%{opacity:.8;transform:scale(.4)}100%{opacity:0;transform:scale(2.2)}}
+@keyframes trial-spark-open{0%{opacity:0;transform:translate(-50%,-50%) rotate(var(--angle)) translateY(-35px)}25%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) rotate(var(--angle)) translateY(calc(-1 * var(--reach))) scale(.4)}}
+@keyframes trial-seal-fracture{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(4px)}60%{transform:translateX(-2px)}80%{transform:translateX(1px)}}
+@keyframes trial-orbit-close{from{transform:rotate(0);opacity:1}to{transform:rotate(-10deg);opacity:.5}}
+@keyframes trial-wave-close{from{opacity:.5;transform:scale(1.4)}to{opacity:0;transform:scale(.7)}}
+@keyframes trial-shard-fall{0%{opacity:0;transform:translate(-50%,-50%) rotate(var(--angle)) translateY(-65px)}25%{opacity:.9}100%{opacity:0;transform:translate(-50%,45px) rotate(var(--angle)) translateY(calc(-1 * var(--reach))) scale(.6)}}
+@keyframes trial-crack-draw{from{stroke-dashoffset:290}to{stroke-dashoffset:0}}
+@keyframes trial-transition{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+dialog.trial-code-reveal{background:radial-gradient(ellipse at 50% 0,#5c653733,transparent 70%),#263b2e;border-color:#d7c283;text-align:center;padding:42px 28px;box-shadow:0 0 0 5px #13291f,0 0 0 6px #92845e,0 15px 80px #0009;animation:trial-code-arrive .5s ease-out both}
+.trial-code-reveal .overline{color:#e2cc88;letter-spacing:.25em}.trial-code-reveal h2{margin:14px 0 18px;font-size:29px;color:#f2e2ad}.trial-code-reveal .clearance-code{display:block;overflow-wrap:anywhere;padding:24px 15px;margin:24px 0;background:#172b22;border:1px solid #a49263;box-shadow:inset 0 0 35px #98865c20;color:#f1e2aa}.trial-code-reveal #clearance-status{font-size:13px;color:#bdcbb5;line-height:1.8}
+@keyframes trial-code-arrive{from{opacity:0;transform:translateY(12px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:560px){.trial-progress{gap:5px}.trial-progress li{gap:6px;padding:10px 4px}.trial-progress-gem{flex-basis:25px;width:25px;height:30px}.trial-progress li>span:last-child{font-size:11px}.trial-progress small{font-size:9px}.trial-verdict h3{font-size:23px}.trial-seal{width:205px;height:205px}.trial-verdict{min-height:420px}dialog.trial-code-reveal{padding:30px 20px}}
+@media(prefers-reduced-motion:reduce){.trial-seal,.trial-seal *,.trial-transition-track i,dialog.trial-code-reveal{animation:none!important}.trial-spark,.trial-wave{display:none}.trial-verdict .trial-aura{opacity:.5}.trial-seal svg{filter:none}}
 #mine-light{position:absolute;inset:0;z-index:3;pointer-events:none;background-repeat:no-repeat}
 #mine-light[hidden]{display:none}
 
