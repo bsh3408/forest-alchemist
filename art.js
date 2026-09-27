@@ -52,20 +52,6 @@ function packItemSheet(im){
 }
 function terrainColor(index,x,y){const a=REDRAW.terrain;if(!a)return null;const mirror=v=>{v=((Math.floor(v)%288)+288)%288;return v<144?v:287-v;};const p=(mirror(y)*144+mirror(x))*4,d=a[index];return 'rgb('+d[p]+','+d[p+1]+','+d[p+2]+')';}
 let mineGroundCache=null;
-function drawMineSupport(px,py){
- // One wall-mounted post with a diagonal brace; never a doorway-shaped pair.
- ctx.fillStyle='#27221e';ctx.fillRect(px+8,py+14,10,33);
- ctx.fillStyle='#654e36';ctx.fillRect(px+10,py+15,6,30);
- ctx.fillStyle='#94714a';ctx.fillRect(px+10,py+16,2,27);
- ctx.fillStyle='#40352a';ctx.fillRect(px+14,py+16,2,28);
- for(let n=0;n<20;n+=2){
-  ctx.fillStyle='#2c2721';ctx.fillRect(px+13+n,py+36-n,6,6);
-  ctx.fillStyle='#765b3d';ctx.fillRect(px+14+n,py+36-n,4,3);
-  ctx.fillStyle='#a08053';ctx.fillRect(px+14+n,py+36-n,3,1);
- }
- ctx.fillStyle='#3b3830';ctx.fillRect(px+8,py+43,11,4);ctx.fillRect(px+30,py+16,7,4);
- ctx.fillStyle='#a59b78';ctx.fillRect(px+12,py+39,2,2);ctx.fillRect(px+32,py+17,2,2);
-}
 function drawMineArt(map){
  if(!REDRAW.terrain)return;
  if(mineGroundCache?.map===map&&mineGroundCache.width===canvas.width&&mineGroundCache.terrain===REDRAW.terrain){ctx.putImageData(mineGroundCache.data,0,0);return;}
@@ -81,8 +67,6 @@ function drawMineArt(map){
     ctx.globalAlpha=(5-n)*(dy===-1?.055:.03);ctx.fillStyle='#080d14';
     if(dy)ctx.fillRect(px,dy<0?py+n*3:py+46-n*2,48,dy<0?3:2);else ctx.fillRect(dx<0?px+n*2:px+46-n*2,py,2,48);
    }
-  }else if(land(x,y+1)&&groundHash(ox+x,oy+y)%7===0){
-   ctx.globalAlpha=1;drawMineSupport(px,py);
   }
  }
  ctx.restore();const data=ctx.getImageData(0,0,canvas.width,canvas.height);mineGroundCache={map,width:canvas.width,terrain:REDRAW.terrain,data};

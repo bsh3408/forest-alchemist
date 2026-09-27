@@ -56,6 +56,7 @@ function showSanctuaryResult(r,after){
  window.sanctuaryCelebrating=true;
  $('utility-content').innerHTML=sanctuaryVerdict(r,state.sanctuary);
  $('utility-dialog').scrollTop=0;
+ $('utility-content').scrollTop=0;
  if(!r.ok)$('trial-exit').onclick=closeUtility;
  const reducedMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
  sanctuaryEffectTimer=setTimeout(()=>{
@@ -73,6 +74,7 @@ function renderFinalTrial(){
  if(p.lastAttemptDay>=state.day){$('utility-content').innerHTML=sanctuaryVerdict({ok:false,completed:Sanctuary.completedTrials(p)},p,true);$('trial-exit').onclick=closeUtility;return;}
  const q=Sanctuary.question(p);$('utility-content').innerHTML=sanctuarySheet(q,p);
  $('utility-dialog').scrollTop=0;
+ $('utility-content').scrollTop=0;
  $('trial-exit').onclick=closeUtility;
  $('trial-reset').onclick=()=>{const r=Sanctuary.resetQuestion(state);if(r.ok){sanctuarySave();renderFinalTrial();}$('trial-feedback').textContent=r.message;};
  let submitted=false;

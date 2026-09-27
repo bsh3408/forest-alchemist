@@ -53,7 +53,7 @@ function newGame(day=1,savings=0,capacity=12,seed=Math.floor(Math.random()*21474
 const near=(a,b)=>Math.abs(a.x-b.x)+Math.abs(a.y-b.y)<=1;
 const result=(ok,message)=>({ok,message});
 const activeNodes=s=>s.phase==='morning'?s.nodes.filter(n=>n.region===s.region):[];
-const activeTreasures=s=>s.phase==='morning'&&s.area==='mine'?(s.treasures||[]).filter(t=>t.region===s.region):[];
+const activeTreasures=s=>s.phase==='morning'&&s.area==='mine'?(s.treasures||[]).filter(t=>t.region===s.region&&t.revealed):[];
 const currentGuest=s=>s.orders.find(o=>!o.served&&!o.skipped);
 function blocked(s,x,y){if(x<0||y<0||x>=W||y>=H)return true;if(s.phase!=='morning')return true;const map=s.maps[s.region];if(!map.floor.includes(x+','+y))return true;const portals=s.area==='forest'?[...(s.region===GATE_REGION?[MINE_GATE]:[]),...(s.region==='forest0'?[HOME]:[])]:(s.region===EXIT_REGION?[MINE_EXIT]:[]);return activeTreasures(s).some(t=>!t.opened&&t.x===x&&t.y===y)||map.decor.some(p=>p[0]===x&&p[1]===y)||portals.some(p=>p.x===x&&p.y===y)||activeNodes(s).some(n=>n.x===x&&n.y===y&&!n.used);}
 const bagCount=s=>Object.values(s.bag).reduce((a,b)=>a+b,0);
@@ -313,8 +313,10 @@ function setShopName(s,name){if(typeof name!=='string'||!name.trim()||[...name.t
 function travelRegion(s,dx,dy=0){if(s.phase!=='morning'||s.inspection||s.bench||Math.abs(dx)+Math.abs(dy)!==1)return result(false,'');const p=s.player,x=p.x+dx,y=p.y+dy;if(!((dx<0&&p.x===1)||(dx>0&&p.x===W-2)||(dy<0&&p.y===1)||(dy>0&&p.y===8))||blocked(s,x,y))return result(false,'지역 경계로 이동해 주세요.');if(s.energy<1)return exhaustion(s);const index=Number(s.region.slice(-1)),col=index%3,row=Math.floor(index/3);if(col+dx<0||col+dx>2||row+dy<0||row+dy>2)return result(false,'더 이상 이어지는 길이 없습니다.');const destination=s.area+((row+dy)*3+col+dx),arrival={x:dx?dx>0?1:W-2:p.x,y:dy?dy>0?1:8:p.y};if(!s.maps[destination].floor.includes(arrival.x+','+arrival.y))return result(false,'갱도 벽이 막고 있습니다.');s.region=destination;s.player={x:dx?dx>0?1:W-2:p.x,y:dy?dy>0?1:8:p.y};s.energy--;s.steps++;return exhaustion(s)||{ok:true,regionChanged:true,message:s.maps[s.region].name+'에 도착했습니다.'};}
 const treasureSpot=t=>t.region+':'+t.x+','+t.y;
 // Use a separate traversal state so placement follows the actual map transitions.
-function reachableMine(s){
+function reachableMine(s,excavated=false){
  const probe={...s,phase:'morning',area:'mine',bench:null,inspection:null},queue=[{region:'mine0',x:2,y:7}],seen=new Set(['mine0:2,7']);
+ // Placement may use routes opened by mining, but never solid cave walls.
+ if(excavated){probe.maps=Object.fromEntries(Object.entries(s.maps).map(([id,map])=>[id,{...map,decor:[]}]));probe.nodes=s.nodes.map(n=>({...n,used:true}));probe.treasures=[];}
  for(let i=0;i<queue.length;i++){const p=queue[i];for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]]){
   probe.area='mine';probe.region=p.region;probe.player={x:p.x,y:p.y};probe.energy=100000;
   // Walking through the exit is valid for players, not for mine-only placement.
@@ -326,17 +328,17 @@ function placeMineTreasures(s,previous=[]){
  s.treasures=[];s.treasureCoins=0;
  let seed=((s.worldSeed||0)^Math.imul(s.day,2654435761)^0x7ac431)>>>0;
  const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;},avoid=new Set((previous||[]).map(treasureSpot));
- let reachable=reachableMine(s);
+ const reachable=reachableMine(s,true);
  const candidates=[...reachable].map(key=>{const [region,xy]=key.split(':'),[x,y]=xy.split(',').map(Number);return {region,x,y};}).filter(t=>t.region!=='mine0'&&t.x>1&&t.x<W-2&&t.y>1&&t.y<H-2&&!avoid.has(treasureSpot(t))&&!(s.region===t.region&&s.player.x===t.x&&s.player.y===t.y)&&!s.nodes.some(n=>n.region===t.region&&n.x===t.x&&n.y===t.y));
  for(let i=candidates.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[candidates[i],candidates[j]]=[candidates[j],candidates[i]];}
- const adjacent=(seen,t)=>[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>seen.has(treasureSpot({region:t.region,x:t.x+dx,y:t.y+dy})));
- const resources=s.nodes.filter(n=>n.area==='mine'&&!n.used&&adjacent(reachable,n));
+ // Prefer narrow recesses. The cover looks and behaves like every other rock.
+ const degree=t=>[[1,0],[-1,0],[0,1],[0,-1]].filter(([dx,dy])=>s.maps[t.region].floor.includes((t.x+dx)+','+(t.y+dy))).length;
+ candidates.sort((a,b)=>degree(a)-degree(b));
  for(const candidate of candidates){
   if(s.treasures.some(t=>t.region===candidate.region))continue;
-  const chest={...candidate,id:'treasure-'+s.day+'-'+s.treasures.length,coins:20+Math.floor(random()*7)*5,opened:false};s.treasures.push(chest);
-  const after=reachableMine(s);
-  if(after.size!==reachable.size-1||!s.treasures.every(t=>adjacent(after,t))||!resources.every(n=>adjacent(after,n))){s.treasures.pop();continue;}
-  reachable=after;if(s.treasures.length===2)break;
+  const chest={...candidate,id:'treasure-'+s.day+'-'+s.treasures.length,coins:20+Math.floor(random()*7)*5,opened:false,revealed:false};s.treasures.push(chest);
+  const rocks=s.maps[chest.region].decor;if(!rocks.some(([x,y])=>x===chest.x&&y===chest.y))rocks.push([chest.x,chest.y]);
+  if(s.treasures.length===2)break;
  }
 }
 function openTreasure(s,id){
@@ -354,17 +356,33 @@ function breakRock(s,x,y){
  if(!s.equipment.pickaxe)return result(false,'바위를 부수려면 곡괭이가 필요합니다.');
  if(s.energy<2)return result(false,'바위를 부수려면 행동력 2가 필요합니다.');
  map.decor.splice(index,1);s.energy-=2;
- return {...(exhaustion(s)||result(true,'바위를 부숴 길을 열었습니다. · 행동력 −2')),rockBroken:true};
+ const treasure=(s.treasures||[]).find(t=>t.region===s.region&&t.x===x&&t.y===y&&!t.revealed);
+ if(treasure)treasure.revealed=true;
+ return {...(exhaustion(s)||result(true,treasure?'바위 뒤에서 보물상자가 드러났습니다! · 행동력 −2':'바위를 부숴 길을 열었습니다. · 행동력 −2')),rockBroken:true,treasureRevealed:!!treasure};
 }
 function collectDirect(s,id){const n=activeNodes(s).find(n=>n.id===id&&!n.used);if(!n||!near(s.player,n)||!['wood','water','stone'].includes(n.item))return result(false,'가까이 이동해 주세요.');if(n.item==='stone'){if(!s.equipment.pickaxe)return result(false,'규석을 캐려면 곡괭이가 필요합니다.');n.verified=true;return harvest(s,id);}if(n.item==='wood'){if(!s.equipment.axe)return result(false,'도끼가 필요합니다.');n.verified=true;return harvest(s,id);}if(s.energy<1)return exhaustion(s);if(bagCount(s)>=s.capacity)return result(false,'가방이 가득 찼어요.');s.bag.water++;s.energy--;s.harvested++;return exhaustion(s)||{ok:true,message:'우물에서 물 1병을 길었습니다.',water:true};}
 function generateWorld(s,seed,previousTreasures=[]){s.worldSeed=seed;let n=seed>>>0;const rng=()=>{n=(Math.imul(n,1664525)+1013904223)>>>0;return n/4294967296;};const blueprints=s.nodes.filter(n=>n.item!=='water'),names={forest:['이슬 숲','안개 계곡','참나무 숲','버들 강변','이끼 숲','고요한 여울','고목 숲','달빛 숲','깊은 숲'],mine:['새벽 광산','붉은 암맥','깊은 동굴','수정 갱도','구리 절벽','철빛 회랑','그늘 갱도','지하 협곡','오래된 채굴장']};s.maps={};s.nodes=[];
 
  const terrain={forest:new Set(),mine:new Set()};const put=(area,x,y)=>{if(x>0&&y>0&&x<44&&y<29)terrain[area].add(x+','+y);};
  for(let y=1;y<29;y++)for(let x=1;x<44;x++)if(((x-22)/22)**2+((y-15)/15)**2<1)put('forest',x,y);
- // A single fixed maze is carved in world coordinates before splitting into screens.
- const visited=new Set();let mazeSeed=731;const rand=()=>{mazeSeed=(Math.imul(mazeSeed,1664525)+1013904223)>>>0;return mazeSeed/4294967296;};
- function tunnel(x,y,tx,ty){while(x!==tx||y!==ty){for(let j=0;j<2;j++)for(let k=0;k<2;k++)put('mine',x+k,y+j);if(x!==tx)x+=Math.sign(tx-x);else y+=Math.sign(ty-y);}for(let j=0;j<2;j++)for(let k=0;k<2;k++)put('mine',x+k,y+j);}
- function maze(cx,cy){visited.add(cx+','+cy);const dirs=[[1,0],[-1,0],[0,1],[0,-1]];for(let i=3;i>0;i--){const j=Math.floor(rand()*(i+1));[dirs[i],dirs[j]]=[dirs[j],dirs[i]];}for(const [dx,dy] of dirs){const nx=cx+dx,ny=cy+dy;if(nx<0||nx>=6||ny<0||ny>=4||visited.has(nx+','+ny))continue;tunnel(3+cx*7,3+cy*7,3+nx*7,3+ny*7);maze(nx,ny);}}maze(0,0);
+ // Authored as one cave: bent passages, small chambers, alternate loops and blind veins.
+ // Bends stay away from screen seams so all four region transitions remain continuous.
+ const passages=[
+  [[2,7],[5,7],[5,4],[10,4],[10,7],[17,7],[17,4],[21,4],[21,6],[26,6],[26,3],[33,3],[33,6],[40,6],[40,12],[37,12],[37,15],[41,15],[41,17],[35,17],[35,23],[40,23],[40,27],[33,27],[33,25],[27,25],[27,22],[23,22],[23,26],[17,26],[17,23],[11,23],[11,26],[6,26],[6,22],[3,22],[3,16],[8,16],[8,12],[5,12],[5,7]],
+  [[8,16],[12,16],[12,13],[17,13],[17,16],[23,16],[23,12],[27,12],[27,15],[32,15],[32,12],[37,12]],
+  [[17,7],[17,12],[20,12],[20,14],[17,14]],
+  [[26,6],[26,12]],
+  [[23,16],[23,17],[20,17],[20,22],[23,22]],
+  [[11,23],[11,22],[9,22]],
+  [[35,17],[32,17],[32,22],[29,22]],
+  [[10,4],[10,2],[12,2]],[[21,4],[21,2],[23,2]],
+  [[40,6],[42,6],[42,3]],[[8,16],[8,18]],
+  [[23,12],[23,11]],[[41,17],[42,17]],[[6,26],[3,26]]
+ ];
+ for(const points of passages){let [x,y]=points[0];put('mine',x,y);for(const [tx,ty]of points.slice(1)){while(x!==tx||y!==ty){if(x!==tx)x+=Math.sign(tx-x);else y+=Math.sign(ty-y);put('mine',x,y);}}}
+ for(const [cx,cy]of [[5,7],[10,4],[21,6],[33,6],[40,15],[35,23],[23,26],[6,24],[8,16],[17,16],[27,12]]){
+  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if(Math.abs(dx)+Math.abs(dy)<2)put('mine',cx+dx,cy+dy);
+ }
  // Fixed facilities have a connected approach in both layers.
  for(let i=0;i<9;i++){const ox=i%3*W,oy=Math.floor(i/3)*H;for(const area of ['forest','mine'])for(const p of area==='forest'?[HOME,MINE_GATE,...(WELLS['forest'+i]?[WELLS['forest'+i]]:[]),{x:3,y:8},{x:13,y:3}]:(i===0?[MINE_EXIT,{x:2,y:7}]:[])){const x=ox+p.x,y=oy+p.y;let nearest=[...terrain[area]].map(k=>k.split(',').map(Number)).sort((a,b)=>Math.abs(a[0]-x)+Math.abs(a[1]-y)-Math.abs(b[0]-x)-Math.abs(b[1]-y))[0];let xx=x,yy=y;while(xx!==nearest[0]||yy!==nearest[1]){put(area,xx,yy);put(area,xx-1,yy);if(xx!==nearest[0])xx+=Math.sign(nearest[0]-xx);else yy+=Math.sign(nearest[1]-yy);}for(const [dx,dy] of [[0,0],[1,0],[-1,0],[0,1],[0,-1]])put(area,x+dx,y+dy);}}
 
@@ -379,16 +397,7 @@ function generateWorld(s,seed,previousTreasures=[]){s.worldSeed=seed;let n=seed>
  for(const p of area==='forest'?[...(id==='forest0'?[HOME,{x:3,y:8}]:[]),...(id===GATE_REGION?[MINE_GATE,{x:13,y:3}]:[]),...(WELLS[id]?[WELLS[id]]:[])]:(id===EXIT_REGION?[MINE_EXIT,{x:2,y:7}]:[]))for(const [dx,dy] of [[0,0],[1,0],[-1,0],[0,1],[0,-1]])reserved.add((p.x+dx)+','+(p.y+dy));
  const trails=[];for(const k of floor){const [x,y]=k.split(',').map(Number),gx=ox+x,gy=oy+y;if(area==='forest'&&(forestRoads.has(gx+','+gy))){trails.push(k);reserved.add(k);}}
  const positions=[];
- for(let y=2;y<H-2;y++)for(let x=2;x<W-2;x++){const k=x+','+y;if(reserved.has(k))continue;if(area==='forest'){if([[0,0],[1,0],[-1,0],[0,1],[0,-1]].every(([dx,dy])=>floor.has((x+dx)+','+(y+dy))))positions.push([x,y]);}else if(!floor.has(k)&&[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>floor.has((x+dx)+','+(y+dy))))positions.push([x,y]);}
- if(area==='mine'){
-  // Fixed side pockets keep the two-cell corridor narrow. Only the occupants roll daily.
-  const rank=([x,y])=>(Math.imul(ox+x+29,73856093)^Math.imul(oy+y+17,19349663))>>>0;
-  positions.sort((a,b)=>rank(a)-rank(b));const pockets=[];
-  for(const p of positions)if(!pockets.some(q=>Math.abs(p[0]-q[0])+Math.abs(p[1]-q[1])<2))pockets.push(p);
-  for(const p of positions)if(pockets.length<8&&!pockets.includes(p))pockets.push(p);
-  positions.splice(0,positions.length,...pockets.slice(0,8));
-  for(const pos of positions)floor.add(pos.join(','));
- }
+ for(let y=2;y<H-2;y++)for(let x=2;x<W-2;x++){const k=x+','+y;if(reserved.has(k))continue;if(area==='forest'){if([[0,0],[1,0],[-1,0],[0,1],[0,-1]].every(([dx,dy])=>floor.has((x+dx)+','+(y+dy))))positions.push([x,y]);}else if(floor.has(k))positions.push([x,y]);}
  for(let i=positions.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[positions[i],positions[j]]=[positions[j],positions[i]];}
  const templates=blueprints.filter(n=>n.area===area).map(n=>({...n}));if(area==='forest'){templates.splice(3,0,{...templates[1],id:'koh-herb',item:'koh',qty:2});if(index>0){for(let i=0;i<3;i++)templates[i]={...templates[i],item:['acid','base','koh'][Math.floor(rng()*3)]};}for(let i=0;i<5+Math.floor(rng()*8);i++)templates.push({...templates.find(n=>n.item==='wood'),id:'tree-extra'+i});}
  if(area==='mine')templates.push({id:'silica-rock',area,item:'stone',qty:2,sprite:5});
@@ -400,7 +409,7 @@ function generateWorld(s,seed,previousTreasures=[]){s.worldSeed=seed;let n=seed>
  const rocks=area==='forest'?[...rockMass].map(k=>k.split(',').map(Number)).filter(([x,y])=>Math.floor(x/W)===index%3&&Math.floor(y/H)===Math.floor(index/3)).map(([x,y])=>[x-ox,y-oy]):[];for(const [x,y] of rocks)floor.add(x+','+y);
  const decor=area==='forest'?rocks:positions.filter(p=>floor.has(p.join(','))).slice(0,3);s.maps[id]={name:names[area][index],floor:[...floor],decor,trails};
  }
- s.mineLayoutVersion=2;
+ s.mineLayoutVersion=3;
  placeMineTreasures(s,previousTreasures);
 }
 
@@ -415,12 +424,13 @@ function grantTeacherSupplies(s,account){
 }
 
 function migrateMineLayout(s){
- if(s.mineLayoutVersion===2)return;
+ if(s.mineLayoutVersion===3)return;
  const rebuilt=newGame(s.day,0,s.capacity,s.worldSeed??s.day*7919),oldNodes=new Map(s.nodes.filter(n=>n.area==='mine').map(n=>[n.id,n])),oldTreasures=s.treasures||[];
  for(let i=0;i<9;i++)s.maps['mine'+i]=rebuilt.maps['mine'+i];
  s.nodes=[...s.nodes.filter(n=>n.area!=='mine'),...rebuilt.nodes.filter(n=>n.area==='mine').map(n=>({...n,used:!!oldNodes.get(n.id)?.used}))];
- s.treasures=rebuilt.treasures.map((t,i)=>({...t,opened:!!oldTreasures[i]?.opened,coins:oldTreasures[i]?.coins??t.coins}));
- s.mineLayoutVersion=2;
+ s.treasures=rebuilt.treasures.map((t,i)=>({...t,opened:!!oldTreasures[i]?.opened,revealed:!!oldTreasures[i]?.opened,coins:oldTreasures[i]?.coins??t.coins}));
+ for(const t of s.treasures)if(t.opened)s.maps[t.region].decor=s.maps[t.region].decor.filter(([x,y])=>x!==t.x||y!==t.y);
+ s.mineLayoutVersion=3;
  if(s.phase==='morning'&&s.area==='mine'){
   const positions=[...reachableMine(s)].filter(k=>k.startsWith(s.region+':')).map(k=>{const [x,y]=k.split(':')[1].split(',').map(Number);return {x,y};});
   if(!positions.some(p=>p.x===s.player.x&&p.y===s.player.y)){positions.sort((a,b)=>Math.abs(a.x-s.player.x)+Math.abs(a.y-s.player.y)-Math.abs(b.x-s.player.x)-Math.abs(b.y-s.player.y));s.player=positions[0]||{x:2,y:7};if(!positions.length)s.region=EXIT_REGION;}
