@@ -79,8 +79,12 @@ function wrong(s,message){
 function move(s,dx,dy){
  if(s.bench||s.inspection||s.phase!=='morning'||Math.abs(dx)+Math.abs(dy)!==1)return result(false,'');
  const x=s.player.x+dx,y=s.player.y+dy;
+ // Doorways stay blocked to pathfinding so routes cannot pass through another map.
+ // A deliberate step onto the entrance uses the same transition as clicking it.
+ if(s.area==='forest'&&s.region===GATE_REGION&&x===MINE_GATE.x&&y===MINE_GATE.y)return changeArea(s,'mine');
+ if(s.area==='mine'&&s.region===EXIT_REGION&&x===MINE_EXIT.x&&y===MINE_EXIT.y)return changeArea(s,'forest');
  if(!blocked(s,x,y)){if(x===0||x===W-1)return travelRegion(s,x===0?-1:1,0);if(y===0||y===9)return travelRegion(s,0,y===0?-1:1);}
- if(blocked(s,x,y))return result(false,'장애물은 돌아가세요.');
+ if(blocked(s,x,y))return {ok:false,collision:true,message:''};
  if(s.phase==='morning'&&s.energy<=0)return result(false,'행동력을 모두 썼어요. 긴급 귀환을 이용하세요.');
  s.player={x,y};if(s.phase==='morning'){s.energy--;s.steps++;}return exhaustion(s)||result(true,'');
 }
@@ -91,7 +95,7 @@ function changeArea(s,destination){
  if(s.region!==(entering?GATE_REGION:EXIT_REGION)||!near(s.player,entering?MINE_GATE:MINE_EXIT))return result(false,'입구 옆으로 이동해 주세요.');
  if(s.energy<1)return result(false,'행동력이 없어요. 긴급 귀환을 이용하세요.');
  s.area=destination;s.region=entering?EXIT_REGION:GATE_REGION;s.player=entering?{x:2,y:7}:{x:13,y:3};s.energy--;s.steps++;
- return exhaustion(s)||result(true,entering?'새벽 광산에 들어왔어요. 시료를 조사해 정체를 확인하세요.':'안개 계곡으로 돌아왔어요. 연금술 상점 입구에서 오후 영업을 시작할 수 있습니다.');
+ return exhaustion(s)||{ok:true,regionChanged:true,message:entering?'새벽 광산에 들어왔어요. 시료를 조사해 정체를 확인하세요.':'안개 계곡으로 돌아왔어요. 연금술 상점 입구에서 오후 영업을 시작할 수 있습니다.'};
 }
 const REAGENT_QUESTIONS=[["푸른 리트머스 종이를 붉게 바꾸는 용액의 성질은?","산성","중성","염기성"],["붉은 리트머스 종이를 푸르게 바꾸는 용액의 성질은?","염기성","산성","중성"],["BTB 지시약을 넣었더니 노란색이 되었습니다. 이 용액의 성질은?","산성","중성","염기성"],["BTB 지시약을 넣었더니 파란색이 되었습니다. 이 용액의 성질은?","염기성","산성","중성"],["중성 수용액에 BTB 용액을 넣었을 때 나타나는 색은?","초록색","노란색","파란색"],["산성 수용액의 공통적인 성질과 관련된 이온은?","H⁺","Na⁺","Cl⁻"],["염기성 수용액의 공통적인 성질과 관련된 이온은?","OH⁻","Na⁺","Cl⁻"],["수용액에서 H⁺와 반응하여 물을 만드는 이온은?","OH⁻","Cl⁻","Na⁺"],["H⁺와 OH⁻가 물을 만들 때 반응하는 입자 수의 비는?","1 : 1","1 : 2","2 : 1"],["염산과 수산화나트륨 수용액의 중화에서 직접 물을 만드는 이온 쌍은?","H⁺와 OH⁻","Na⁺와 Cl⁻","H⁺와 Na⁺"],["염산과 수산화나트륨 수용액을 섞을 때 Na⁺와 Cl⁻는 어떻게 되나요?","수용액에 이온으로 남는다","모두 물로 바뀐다","모두 기체로 사라진다"],["염산과 수산화나트륨 수용액이 반응하여 물을 만드는 반응은?","중화 반응","증발","융해"],["순수한 물에 소금을 녹여 소금물을 만들 때 물의 역할은?","용매","용질","침전물"],["순수한 물에 소금을 녹여 소금물을 만들 때 소금의 역할은?","용질","용매","지시약"],["이온이 들어 있는 수용액에 전류가 흐를 때 전하를 운반하는 입자는?","이동하는 이온","물 위의 기름방울","가라앉은 나무 조각"],["고체 염화나트륨과 달리 염화나트륨 수용액에 전류가 흐르는 까닭은?","이온이 자유롭게 이동하기 때문","이온의 전하가 없어지기 때문","물 전체가 금속이 되기 때문"],["NaOH가 물에 녹을 때 생기는 주요 이온 쌍은?","Na⁺와 OH⁻","Na⁻와 H⁺","Na⁺와 Cl⁻"],["KOH가 물에 녹을 때 생기는 주요 이온 쌍은?","K⁺와 OH⁻","K⁻와 H⁺","K⁺와 Cl⁻"],["염화수소(HCl)가 물에 녹을 때 생성되는 이온은?","H⁺와 Cl⁻","Na⁺와 OH⁻","K⁺와 OH⁻"],["NaOH와 KOH 수용액이 공통으로 염기성을 나타내는 까닭은?","OH⁻가 있기 때문","같은 금속 이온이 있기 때문","Cl⁻가 있기 때문"],["같은 온도에서 H⁺의 수가 OH⁻의 수보다 많은 수용액의 성질은?","산성","중성","염기성"],["같은 온도에서 OH⁻의 수가 H⁺의 수보다 많은 수용액의 성질은?","염기성","산성","중성"],["H⁺와 OH⁻의 농도가 같은 수용액의 성질은?","중성","산성","염기성"],["묽은 염산과 묽은 수산화나트륨 수용액이 중화 반응을 할 때 열의 출입으로 옳은 것은?","주변으로 방출된다","반드시 주변에서 흡수된다","열의 출입이 전혀 없다"],["중화 반응에서 온도 상승량을 비교할 때 생성된 물 분자 수 외에 고려해야 할 조건은?","전체 용액의 양과 열손실 등","시약병 마개의 색만","손님의 이름만"],["산성 수용액과 염기성 수용액을 같은 부피로 혼합하였다. 혼합 용액이 항상 중성인지에 대한 설명으로 옳은 것은?","아니다. H⁺와 OH⁻의 수도 비교해야 한다","항상 도달한다","두 용액은 절대 반응하지 않는다"],["중성인 염화나트륨 수용액에 존재하는 이온으로 옳은 것은?","Na⁺와 Cl⁻가 있다","중성이므로 이온이 전혀 없다","전자만 있다"],["미확인 용액의 산성·염기성을 알아보는 적절한 방법은?","지시약의 색 변화를 관찰한다","직접 맛을 본다","맨손으로 만져 본다"],["H⁺의 수가 3N인 산성 수용액과 OH⁻의 수가 3N인 염기성 수용액을 혼합하였다. 반응 후 남는 H⁺ 또는 OH⁻의 종류와 수로 옳은 것은? (단, N은 입자 수를 나타내는 기준값이며, 물의 자동 이온화는 무시한다.)","H⁺와 OH⁻가 모두 남지 않는다","H⁺ 3N","OH⁻ 3N"],["H⁺의 수가 4N인 산성 수용액과 OH⁻의 수가 2N인 염기성 수용액을 혼합하였다. 반응 후 남는 H⁺ 또는 OH⁻의 종류와 수로 옳은 것은? (단, N은 입자 수를 나타내는 기준값이며, 물의 자동 이온화는 무시한다.)","H⁺ 2N","OH⁻ 2N","H⁺와 OH⁻가 모두 남지 않는다"],["H⁺의 수가 2N인 산성 수용액과 OH⁻의 수가 5N인 염기성 수용액을 혼합하였다. 반응 후 남는 H⁺ 또는 OH⁻의 종류와 수로 옳은 것은? (단, N은 입자 수를 나타내는 기준값이며, 물의 자동 이온화는 무시한다.)","OH⁻ 3N","H⁺ 3N","H⁺와 OH⁻가 모두 남지 않는다"],["H⁺의 수가 6N인 산성 수용액과 OH⁻의 수가 4N인 염기성 수용액을 혼합하였다. 반응 후 남는 H⁺ 또는 OH⁻의 종류와 수로 옳은 것은? (단, N은 입자 수를 나타내는 기준값이며, 물의 자동 이온화는 무시한다.)","H⁺ 2N","OH⁻ 2N","H⁺와 OH⁻가 모두 남지 않는다"],["H⁺의 수가 5N인 산성 수용액과 OH⁻의 수가 8N인 염기성 수용액을 혼합하였다. 반응 후 남는 H⁺ 또는 OH⁻의 종류와 수로 옳은 것은? (단, N은 입자 수를 나타내는 기준값이며, 물의 자동 이온화는 무시한다.)","OH⁻ 3N","H⁺ 3N","H⁺와 OH⁻가 모두 남지 않는다"],["H⁺의 수가 7N인 산성 수용액과 OH⁻의 수가 7N인 염기성 수용액을 혼합하였다. 반응 후 남는 H⁺ 또는 OH⁻의 종류와 수로 옳은 것은? (단, N은 입자 수를 나타내는 기준값이며, 물의 자동 이온화는 무시한다.)","H⁺와 OH⁻가 모두 남지 않는다","H⁺ 7N","OH⁻ 7N"],["H⁺의 수가 8N인 산성 수용액과 OH⁻의 수가 3N인 염기성 수용액을 혼합하였다. 반응 후 남는 H⁺ 또는 OH⁻의 종류와 수로 옳은 것은? (단, N은 입자 수를 나타내는 기준값이며, 물의 자동 이온화는 무시한다.)","H⁺ 5N","OH⁻ 5N","H⁺와 OH⁻가 모두 남지 않는다"],["H⁺의 수가 4N인 산성 수용액과 OH⁻의 수가 7N인 염기성 수용액을 혼합하였다. 반응 후 남는 H⁺ 또는 OH⁻의 종류와 수로 옳은 것은? (단, N은 입자 수를 나타내는 기준값이며, 물의 자동 이온화는 무시한다.)","OH⁻ 3N","H⁺ 3N","H⁺와 OH⁻가 모두 남지 않는다"],["각 실험에서 사용하는 HCl 수용액과 NaOH 수용액의 농도는 각각 일정하다. 염산 2 mL를 중화하는 데 NaOH 수용액 1 mL가 필요하다. 염산 4 mL를 중화하는 데 필요한 NaOH 수용액의 부피는?","2 mL","3 mL","5 mL"],["각 실험에서 사용하는 HCl 수용액과 NaOH 수용액의 농도는 각각 일정하다. 염산 3 mL를 중화하는 데 NaOH 수용액 2 mL가 필요하다. 염산 6 mL를 중화하는 데 필요한 NaOH 수용액의 부피는?","4 mL","5 mL","7 mL"],["각 실험에서 사용하는 HCl 수용액과 NaOH 수용액의 농도는 각각 일정하다. 염산 4 mL를 중화하는 데 NaOH 수용액 6 mL가 필요하다. 염산 2 mL를 중화하는 데 필요한 NaOH 수용액의 부피는?","3 mL","4 mL","6 mL"],["각 실험에서 사용하는 HCl 수용액과 NaOH 수용액의 농도는 각각 일정하다. 염산 5 mL를 중화하는 데 NaOH 수용액 2 mL가 필요하다. 염산 10 mL를 중화하는 데 필요한 NaOH 수용액의 부피는?","4 mL","5 mL","7 mL"]];
 const MINE_QUESTIONS=[["어떤 입자가 전자를 잃는 변화는?", "산화", "환원", "응고"], ["어떤 입자가 전자를 얻는 변화는?", "환원", "산화", "융해"], ["금속이 산소와 결합하여 금속 산화물이 되는 변화는?", "산화", "환원", "중화"], ["금속 산화물에서 산소가 제거되어 금속이 되는 변화는?", "환원", "산화", "용해"], ["Cu²⁺ + 2e⁻ → Cu에서 구리 이온의 변화는?", "환원", "산화", "중화"], ["구리 이온 Cu²⁺ 한 개가 구리 원자 Cu가 되려면?", "전자 2개를 얻는다", "전자 2개를 잃는다", "양성자 2개를 얻는다"], ["산화·환원 반응에서 잃은 전자 수와 얻은 전자 수는?", "같다", "항상 잃은 수가 더 많다", "서로 관계없다"], ["2CuO + C → 2Cu + CO₂에서 산소와 결합하는 탄소의 변화는?", "산화", "환원", "중화"], ["2CuO + C → 2Cu + CO₂에서 산화 구리 속 구리의 변화는?", "환원", "산화", "증발"], ["산화 구리 CuO와 금속 구리 Cu는 같은 물질인가요?", "아니다. CuO에는 산소도 결합해 있다", "같다. 색만 다르다", "같다. 이름만 다르다"]];
@@ -312,8 +316,9 @@ const treasureSpot=t=>t.region+':'+t.x+','+t.y;
 function reachableMine(s){
  const probe={...s,phase:'morning',area:'mine',bench:null,inspection:null},queue=[{region:'mine0',x:2,y:7}],seen=new Set(['mine0:2,7']);
  for(let i=0;i<queue.length;i++){const p=queue[i];for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]]){
-  probe.region=p.region;probe.player={x:p.x,y:p.y};probe.energy=100000;
-  if(!move(probe,dx,dy).ok)continue;
+  probe.area='mine';probe.region=p.region;probe.player={x:p.x,y:p.y};probe.energy=100000;
+  // Walking through the exit is valid for players, not for mine-only placement.
+  if(!move(probe,dx,dy).ok||probe.area!=='mine')continue;
   const next={region:probe.region,...probe.player},key=treasureSpot(next);if(!seen.has(key)){seen.add(key);queue.push(next);}
  }}return seen;
 }

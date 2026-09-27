@@ -19,6 +19,17 @@ function drawItem(k,x,y,size=48){if(['stone','glass','copperSulfate'].includes(k
 function spriteStyle(i){return `background-position:${(i%4)/3*100}% ${Math.floor(i/4)/3*100}%`;}
 function sprite(i,extra=''){return `<i class="sprite ${extra}" style="${spriteStyle(i)}" aria-hidden="true"></i>`;}
 let failureCount=0;
+let collisionAnimation=null;
+function clearCollisionEffect(){const animation=collisionAnimation;collisionAnimation=null;animation?.cancel();}
+function collisionEffect(){
+ if(reduced||state.phase!=='morning'||collisionAnimation)return;
+ const animation=$('map-frame').animate?.([
+  {transform:'translate(0, 0)'},{transform:'translate(-3px, 0)'},
+  {transform:'translate(2px, 1px)'},{transform:'translate(-1px, 0)'},{transform:'translate(0, 0)'}
+ ],{duration:180,easing:'ease-out'});
+ collisionAnimation=animation||null;
+ if(animation)animation.onfinish=animation.oncancel=()=>{if(collisionAnimation===animation)collisionAnimation=null;};
+}
 function failureEffect(){
  const target=$('bench-dialog').open?$('bench-dialog'):$('utility-dialog').open?$('utility-dialog'):$('map-frame').hidden?document.querySelector('.dialogue'):$('map-frame');
  failureCount++;target.classList.remove('fail-a','fail-b');target.classList.add(failureCount%2?'fail-a':'fail-b');
@@ -52,6 +63,7 @@ function showBusinessNotice(kind){
 }
 $('business-announcement').addEventListener('cancel',e=>{e.preventDefault();hideBusinessNotice();});
 function clearGatherDamage(){
+ clearCollisionEffect();
  damageVersion++;damagePending=false;$('gather-damage').hidden=true;$('gather-hit-lock').hidden=true;$('energy-loss-trail').hidden=true;
  $('map-frame').classList.remove('damage-shock');$('energy-hud').classList.remove('damage-taken');
 }
@@ -114,6 +126,7 @@ function moveAnimated(dx,dy){
  const from={...state.player},region=state.region;
  if(walking&&walking.region===region){const progress=Math.min(1,Math.max(0,(performance.now()-walking.start)/walking.duration));from.x=walking.from.x+(walking.to.x-walking.from.x)*progress;from.y=walking.from.y+(walking.to.y-walking.from.y)*progress;}
  const result=G.move(state,dx,dy);
+ if(result.collision)collisionEffect();else if(result.ok)clearCollisionEffect();
  facing=dx<0?'left':dx>0?'right':dy<0?'up':'down';
  if(walkTimer){clearTimeout(walkTimer);walkTimer=null;}
  walking=result.ok&&!result.regionChanged&&!result.exhausted&&region===state.region&&!reduced?{from,to:{...state.player},region,start:performance.now(),duration:105,stride:walkStride++}:null;
@@ -231,9 +244,9 @@ function approachRock(target){
   for(const [dx,dy]of DIRS){const next={x:rock.x+dx,y:rock.y+dy},key=next.x+','+next.y;if(rocks.has(key)&&!seen.has(key)){seen.add(key);queue.push(next);}}
  }
  if(closest)follow(closest.path,()=>interactRock(closest.rock));
- else say('바위에 다가갈 수 있는 길이 막혀 있어요.',false,false);
+ else collisionEffect();
 }
-function follow(path,done){stopRoute();if(path===null){say('그 자리로 가는 길이 막혀 있어요.',false,false);return;}function step(){if(modalOpen()||state.phase==='end')return;if(!path.length){routeTimer=null;done?.();return;}const [dx,dy]=path.shift(),r=moveAnimated(dx,dy);if(r.exhausted||r.regionChanged){notify(r);return;}render();if(!r.ok){say(r.message,false,false);routeTimer=null;return;}routeTimer=setTimeout(step,reduced?65:110);}step();}
+function follow(path,done){stopRoute();if(path===null){collisionEffect();return;}function step(){if(modalOpen()||state.phase==='end')return;if(!path.length){routeTimer=null;done?.();return;}const [dx,dy]=path.shift(),r=moveAnimated(dx,dy);if(r.exhausted||r.regionChanged){notify(r);return;}render();if(!r.ok){if(r.message)say(r.message,false,false);routeTimer=null;return;}routeTimer=setTimeout(step,reduced?65:110);}step();}
 function walkToOrder(id){const guest=G.currentGuest(state);if(!guest||guest.id!==id||state.phase!=='shop')return;openBench(id);}
 function goHome(){stopRoute();notify(G.returnHome(state));canvas.focus({preventScroll:true});}
 function interact(){
@@ -263,9 +276,9 @@ canvas.addEventListener('click',e=>{
   if(Math.abs(x-4)<=1&&(y===2||y===3)){follow(routeTo(G.WATER_BENCH,true),openPrep);return;}
   const guest=G.currentGuest(state);if(guest&&Math.abs(x-guest.x)<=1&&(y===2||y===3)){walkToOrder(guest.id);return;}
  }
- if(!G.blocked(state,x,y))follow(routeTo({x,y}));else say('나무와 바위는 지나갈 수 없어요.',false,false);
+ if(!G.blocked(state,x,y))follow(routeTo({x,y}));else collisionEffect();
 });
-function manualMove(dx,dy){if(modalOpen())return;stopRoute();const r=moveAnimated(dx,dy);if(r.exhausted){notify(r);return;}if(!r.ok&&r.message)say(r.message,false,false);render();}
+function manualMove(dx,dy){if(modalOpen())return;stopRoute();const r=moveAnimated(dx,dy);if(r.exhausted||r.regionChanged){notify(r);return;}if(!r.ok&&r.message)say(r.message,false,false);render();}
 function controlFeedback(b){if(!b||b.disabled||reduced||b.classList?.contains?.('shop-guest'))return;b.animate?.([{transform:'translateY(1px) scale(.98)'},{transform:'translateY(0) scale(1)'}],{duration:180,easing:'ease-out'});}
 document.addEventListener('click',e=>controlFeedback(e.target?.closest?.('button')));
 const dropSelector='[data-slot],#precip-from,#precip-to';
@@ -546,7 +559,9 @@ $('student-login-form').addEventListener('submit',async e=>{
  try{const student=await StudentGate.verify($('student-username').value,$('student-password').value);
  if(!student){$('login-error').textContent='아이디와 학번을 다시 확인해 주세요.';$('student-password').value='';$('student-password').focus();return;}
  if(window.SessionGuard&&!SessionGuard.isAllowed(student)&&(SessionGuard.isClosed(student)||(student.role!=='teacher'&&!SessionGuard.isOpen()))){$('login-error').textContent=SessionGuard.closedMessage();$('student-password').value='';return;}
- studentSession=student;$('student-password').value='';$('login-dialog').close();if(typeof sanctuaryRestore==='function'&&sanctuaryRestore(student)){render();canvas.focus({preventScroll:true});}else showNameDialog();
+ const restored=typeof sanctuaryRestore==='function'&&sanctuaryRestore(student);
+ if(!restored&&student.role!=='teacher'&&window.Clearance?.clearSaved)await window.Clearance.clearSaved(student);
+ studentSession=student;$('student-password').value='';$('login-dialog').close();if(restored){render();canvas.focus({preventScroll:true});}else showNameDialog();
  }catch(error){$('login-error').textContent='로그인을 확인하지 못했습니다. 파일을 다시 열어 주세요.';}
  finally{button.disabled=false;button.textContent='연금술 여정 시작하기 →';}
 });

@@ -277,3 +277,31 @@ button:focus-visible{outline:2px solid #e4ebc7;outline-offset:4px}
 @media(max-width:480px){.assay-stage{gap:16px;padding:12px 0 20px}.assay-vessel{width:200px;max-width:58%}.btb-indicator{width:112px;gap:10px;padding:16px 8px}.btb-color-disc{width:62px;height:62px}.btb-indicator strong{font-size:19px}.assay-vessel figcaption{font-size:13px}}
 @media(prefers-reduced-motion:reduce){.assay-liquid-moving,.btb-color-disc{animation:none}.assay-pour-action,.assay-stream,.assay-ripple{display:none}}
 .quiz-outcome{display:grid;justify-items:center;gap:18px;padding:28px 20px;text-align:center}.quiz-outcome-mark{font-size:44px;line-height:1;color:#c8b886}.quiz-outcome h3{margin:0;font-size:23px;color:#eee6c8}.quiz-outcome p{margin:0;max-width:440px;line-height:1.8;color:#d3dac7;word-break:keep-all}.quiz-outcome button{margin-top:10px;min-width:200px;min-height:46px}
+
+/* Align shared controls without changing the portrait/counter coordinate system. */
+.bench-heading{align-items:center}
+#close-utility,#close-bench{display:grid;place-items:center;width:40px;height:40px;min-height:40px;padding:0;line-height:1}
+.button-row>button,.dialog-actions>button,.trial-actions>button{min-width:0;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;text-align:center}
+#name-dialog>#name-start{display:block;width:100%;text-align:center}
+.bag-item>div{min-width:0;flex:1}
+.bag-item>i,.bag-item>.sprite{flex:none}
+.bag-item>strong{flex:none;margin-left:auto;text-align:right;white-space:nowrap}
+.prep-row>div{display:grid;grid-template-columns:64px minmax(75px,.6fr) minmax(0,1fr) auto;gap:12px;align-items:center}
+.prep-row>div>strong,.prep-row>div>span{min-width:0}
+.prep-row button{margin-left:0;min-width:0;text-align:center;white-space:normal}
+.prep-bottom>button{flex:1;min-width:0;text-align:center}
+.forge-recipes article{display:flex;flex-direction:column;min-width:0}
+.forge-recipes article>button{width:100%;margin-top:auto;text-align:center}
+.forge-recipes article>p:last-of-type{margin-bottom:18px}
+.charcoal-station{min-width:0;text-align:center}
+.charcoal-station>button{max-width:100%;text-align:center}
+@media(max-width:640px){
+  .prep-row>div{grid-template-columns:64px minmax(0,1fr);gap:10px 12px}
+  .prep-row>div>span{grid-column:2}
+  .prep-row>div>button{grid-column:1/-1;width:100%;margin-top:4px}
+  .prep-bottom{align-items:stretch}
+  .prep-bottom>button{width:100%}
+  .bench-heading{flex-wrap:wrap}
+  .bench-heading>div{flex:1 1 calc(100% - 60px)}
+  .bench-heading #bench-skip{order:1;flex-basis:100%}
+}
