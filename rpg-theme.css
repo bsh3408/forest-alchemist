@@ -354,3 +354,14 @@ dialog.trial-code-reveal{background:radial-gradient(ellipse at 50% 0,#5c653733,t
   .trial-progress small{font-size:11px}
   .trial-sheet .trial-table th,.trial-sheet .trial-table td{font-size:13px}
 }
+
+/* 2026-09-27 실제 브라우저 점검: 800px 이하에서 style.css의 옛 규칙이 특별의뢰·클리어 코드·새로 시작 버튼을 숨기던 문제 */
+@media(max-width:800px){
+ header>.text-button:not([hidden]){display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:6px 12px;font-size:13px}
+}
+/* 휴대폰 폭: 상점 안내가 손님 머리를 가리지 않도록 빈 선반 쪽(오른쪽)으로 옮긴다 */
+@media(max-width:640px){
+ .shop-stage .shop-guide{left:auto;right:8px;width:auto;max-width:56%}
+ .shop-stage .shop-guide .guide-heading{gap:6px}
+ .shop-stage .shop-guide .guide-heading strong,.shop-stage .shop-guide .guide-heading button{white-space:nowrap}
+}
