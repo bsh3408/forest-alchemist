@@ -82,7 +82,7 @@ function penalize(kind){
   const p=state.sanctuary;if(!p||p.finalPassed||p.lastAttemptDay>=state.day)return;
   const q=Sanctuary.question(p);p.lastAttemptDay=state.day;p.history.push({day:state.day,questionId:q.id,passed:false,leftWindow:true});p.attempt++;
   if(typeof closeUtility==='function')closeUtility();
-  pendingNotice='최종 시련 풀이 중 창을 벗어나서 오늘의 도전은 오답으로 처리됐어요. 다음 날 새 문제로 다시 도전하세요.';
+  pendingNotice='최종 시련 풀이 중 창을 벗어나서 게임 속 '+state.day+'일차의 도전은 오답으로 처리됐어요. 영업을 마치고 '+(state.day+1)+'일차가 되면 새 문제로 다시 도전하세요.';
  }else if(kind==='quest'){
   const key=window.activeQuestKey,q=Sanctuary.quest(state.sanctuary,key);if(!q)return;
   const r=Sanctuary.submitQuest(state,key,typeof q.answer==='number'?'-999999':'__left_window__');

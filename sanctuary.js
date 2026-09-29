@@ -173,7 +173,7 @@ function submit(s,input,expectedId){
  if(!p||!p.opened||!allRelics(p))return {ok:false,message:'먼저 성소를 개방하세요.'};
  if(s.phase!=='morning'||s.region!==p.region||!p.portal||Math.abs(s.player.x-p.portal.x)+Math.abs(s.player.y-p.portal.y)>1)return {ok:false,message:'성소 앞에서 도전하세요.'};
  if(p.finalPassed)return {ok:false,message:'이미 3가지 시련을 통과했습니다.'};
- if(p.lastAttemptDay>=s.day)return {ok:false,locked:true,message:'오늘의 도전은 끝났습니다. 다음 날 다시 오세요.'};
+ if(p.lastAttemptDay>=s.day)return {ok:false,locked:true,message:'게임 속 '+s.day+'일차의 도전은 끝났습니다. 영업을 마치고 '+(s.day+1)+'일차가 되면 다시 도전할 수 있어요.'};
  const q=question(p);
  if(expectedId&&expectedId!==q.id)return {ok:false,stale:true,message:'새로운 시련의 답안을 입력해 주세요.'};
  const n=value(input);if(n===null)return {ok:false,message:'숫자 또는 분수로 입력해 주세요. 예: 0.5, 1/2'};
@@ -187,14 +187,14 @@ function submit(s,input,expectedId){
   return {ok:true,attempted:true,cleared,advanced:!cleared,completed,trialNumber:q.trialNumber,message:cleared?'세 봉인이 모두 풀렸습니다. 3가지 시련을 완수했습니다.':q.trialNumber+'번째 시련을 통과했습니다. 다음 봉인이 열립니다.'};
  }
  p.lastAttemptDay=s.day;p.attempt=(p.attempt||0)+1;
- return {ok:false,attempted:true,locked:true,completed:completedTrials(p),trialNumber:q.trialNumber,message:'봉인이 다시 닫혔습니다. 통과한 시련은 유지됩니다. 다음 날 이 시련의 새로운 문제로 도전하세요.'};
+ return {ok:false,attempted:true,locked:true,completed:completedTrials(p),trialNumber:q.trialNumber,message:'봉인이 다시 닫혔습니다. 통과한 시련은 유지됩니다. 게임 속 하루가 지나 '+(s.day+1)+'일차가 되면 이 시련의 새로운 문제로 도전할 수 있어요.'};
 }
 
 function resetQuestion(s){
  const p=s.sanctuary;
  if(!p||!p.opened||!allRelics(p)||s.phase!=='morning'||s.region!==p.region||!p.portal||Math.abs(s.player.x-p.portal.x)+Math.abs(s.player.y-p.portal.y)>1)return {ok:false,message:'성소 앞에서 문제를 확인해 주세요.'};
  if(p.finalPassed)return {ok:false,message:'이미 최종 시련을 통과했습니다.'};
- if(p.lastAttemptDay>=s.day)return {ok:false,message:'오늘 답을 제출했습니다. 다음 날 다시 도전하세요.'};
+ if(p.lastAttemptDay>=s.day)return {ok:false,message:'게임 속 '+s.day+'일차에는 이미 답을 제출했습니다. '+(s.day+1)+'일차에 다시 도전하세요.'};
  if(p.resetUsed)return {ok:false,message:'문제 변경 기회를 이미 사용했습니다.'};
  const previous=question(p).type;p.resetUsed=true;p.resetShift=1;
  while(question(p).type===previous)p.resetShift++;
