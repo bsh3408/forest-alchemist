@@ -51,10 +51,21 @@ function sanctuaryVerdict(r,p,settled=false){
 }
 let sanctuaryEffectTimer=null,sanctuaryEffectToken=0;
 function cancelSanctuaryTransition(){if(sanctuaryEffectTimer!==null)clearTimeout(sanctuaryEffectTimer);sanctuaryEffectTimer=null;sanctuaryEffectToken++;window.sanctuaryCelebrating=false;}
+/* 오늘 틀린 시련 문제의 정답·해설. 같은 게임 속 날에만 보여 주고, 창 이탈로 오답 처리된 경우(답을 내지 않음)는 남기지 않는다. */
+function wrongReviewHtml(p){
+ const w=p&&p.lastWrongReview;
+ if(!w||w.day!==state.day)return '';
+ const esc=t=>String(t).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+ return '<section class="trial-review" style="margin-top:12px;padding:12px 14px;border:1px solid rgba(212,175,95,.45);border-radius:10px;background:rgba(0,0,0,.18);text-align:left;line-height:1.7">'+
+  '<strong>방금 틀린 문제 · '+esc(w.title||'')+'</strong><br>정답: <b>'+esc(w.exact)+'</b>'+
+  (w.solution?'<br><small><b>해설</b> '+esc(w.solution)+'</small>':'')+'</section>';
+}
+// 해설을 [탐사 계속하기] 단추 위에 끼워 넣어, 스크롤하지 않아도 보이게 한다.
+function withWrongReview(html,p){const box=wrongReviewHtml(p);return box?html.split('<button id="trial-exit"').join(box+'<button id="trial-exit"'):html;}
 function showSanctuaryResult(r,after){
  cancelSanctuaryTransition();const token=sanctuaryEffectToken,current=state,owner=studentSession?.username;
  window.sanctuaryCelebrating=true;
- $('utility-content').innerHTML=sanctuaryVerdict(r,state.sanctuary);
+ $('utility-content').innerHTML=r.ok?sanctuaryVerdict(r,state.sanctuary):withWrongReview(sanctuaryVerdict(r,state.sanctuary),state.sanctuary);
  $('utility-dialog').scrollTop=0;
  $('utility-content').scrollTop=0;
  if(!r.ok)$('trial-exit').onclick=closeUtility;
@@ -71,7 +82,7 @@ function renderFinalTrial(){
  const p=state.sanctuary;
  utility('sanctuary','3가지 시련','균형의 성소 · 세 봉인을 해제하세요');
  if(p.finalPassed){$('utility-content').innerHTML=sanctuaryVerdict({ok:true,cleared:true,completed:3},p,true)+'<p class="practice-entry"><button id="trial-practice">📖 다시 풀어 보기</button></p>';$('trial-code-open').onclick=()=>{state.clearancePresented=true;closeUtility();showClearance();};$('trial-practice').onclick=()=>renderPracticeTrial(true);return;}
- if(p.lastAttemptDay>=state.day){$('utility-content').innerHTML=sanctuaryVerdict({ok:false,completed:Sanctuary.completedTrials(p)},p,true);$('trial-exit').onclick=closeUtility;return;}
+ if(p.lastAttemptDay>=state.day){$('utility-content').innerHTML=withWrongReview(sanctuaryVerdict({ok:false,completed:Sanctuary.completedTrials(p)},p,true),p);$('trial-exit').onclick=closeUtility;return;}
  const q=Sanctuary.question(p);$('utility-content').innerHTML=sanctuarySheet(q,p);
  $('utility-dialog').scrollTop=0;
  $('utility-content').scrollTop=0;
@@ -82,6 +93,8 @@ function renderFinalTrial(){
   if(submitted)return;
   const r=Sanctuary.submit(state,$('trial-answer').value,q.id);
   if(!r.attempted){$('trial-feedback').textContent=r.message;return;}
+  // 실제 시련에서 틀리면 그 문제의 정답과 해설을 남겨 둔다(2026-10-01 교사 요청). 다음 날에는 다른 문제가 나온다.
+  if(!r.ok)p.lastWrongReview={day:state.day,title:q.title,exact:String(q.exact||q.answer),solution:q.solution||''};
   submitted=true;sanctuarySave();
   showSanctuaryResult(r,()=>{
    if(r.cleared){state.clearancePresented=true;closeUtility();showClearance();}
