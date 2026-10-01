@@ -65,12 +65,12 @@ function showSanctuaryResult(r,after){
  },reducedMotion?180:r.cleared?1900:r.ok?1300:1100);
 }
 
-function openSanctuaryPortal(){const p=state.sanctuary;if(!p?.relics.map)return;stopRoute();utility('sanctuary','균형의 성소','폐허에 남겨진 문양');if(p.finalPassed){$('utility-content').innerHTML='<p>이미 3가지 시련을 통과했습니다.</p><button id="sanctuary-code">내 코드 확인</button>';$('sanctuary-code').onclick=()=>{closeUtility();showClearance();};return;}
+function openSanctuaryPortal(){const p=state.sanctuary;if(!p?.relics.map)return;stopRoute();utility('sanctuary','균형의 성소','폐허에 남겨진 문양');if(p.finalPassed){$('utility-content').innerHTML='<p>이미 3가지 시련을 통과했습니다.</p><button id="sanctuary-code">내 코드 확인</button> <button id="sanctuary-practice">📖 다시 풀어 보기</button>';$('sanctuary-code').onclick=()=>{closeUtility();showClearance();};$('sanctuary-practice').onclick=()=>renderPracticeTrial(true);return;}
  if(!p.opened){$('utility-content').innerHTML=`<p>지도 조각이 가리킨 폐허입니다. 나의 렌즈를 장착하고 성소 열쇠와 은빛 인장을 결합하세요.</p><p>${Sanctuary.relics.map(k=>Sanctuary.names[k]+': '+(p.relics[k]?'보유':'미보유')).join(' · ')}</p><label>렌즈 각인 <select id="sanctuary-lens"><option value="">렌즈 선택</option>${p.relics.lens?'<option value="'+p.lens+'">'+p.lens+'</option>':''}</select></label><p id="sanctuary-feedback" role="status"></p><button id="sanctuary-unlock" class="primary">렌즈 장착 · 열쇠 결합</button>`;$('sanctuary-unlock').onclick=()=>{const r=Sanctuary.enter(state,$('sanctuary-lens').value);$('sanctuary-feedback').textContent=r.message||'성소가 열렸습니다.';if(r.ok){sanctuarySave();renderFinalTrial();render();}};return;}renderFinalTrial();}
 function renderFinalTrial(){
  const p=state.sanctuary;
  utility('sanctuary','3가지 시련','균형의 성소 · 세 봉인을 해제하세요');
- if(p.finalPassed){$('utility-content').innerHTML=sanctuaryVerdict({ok:true,cleared:true,completed:3},p,true);$('trial-code-open').onclick=()=>{state.clearancePresented=true;closeUtility();showClearance();};return;}
+ if(p.finalPassed){$('utility-content').innerHTML=sanctuaryVerdict({ok:true,cleared:true,completed:3},p,true)+'<p class="practice-entry"><button id="trial-practice">📖 다시 풀어 보기</button></p>';$('trial-code-open').onclick=()=>{state.clearancePresented=true;closeUtility();showClearance();};$('trial-practice').onclick=()=>renderPracticeTrial(true);return;}
  if(p.lastAttemptDay>=state.day){$('utility-content').innerHTML=sanctuaryVerdict({ok:false,completed:Sanctuary.completedTrials(p)},p,true);$('trial-exit').onclick=closeUtility;return;}
  const q=Sanctuary.question(p);$('utility-content').innerHTML=sanctuarySheet(q,p);
  $('utility-dialog').scrollTop=0;
@@ -87,6 +87,33 @@ function renderFinalTrial(){
    if(r.cleared){state.clearancePresented=true;closeUtility();showClearance();}
    else{render();renderFinalTrial();}
   });
+ };
+}
+/* 복습(다시 풀어 보기) — 3가지 시련을 모두 통과한 학생이 성소 문제를 다시 풀어 본다(2026-10-01 교사 요청, Claude Code).
+   40문항 은행에서 무작위로 내고, 정답 확인과 풀이만 보여 준다. 학생 기록·코드·유물·일차 제한에는 영향이 없다.
+   통과한 학생은 session-guard의 창 이탈 오답 처리도 건너뛰므로(p.finalPassed) 복습 중 이탈해도 벌점이 없다. */
+let practiceSet=null;
+function renderPracticeTrial(next){
+ const p=state.sanctuary;if(!p||!p.finalPassed)return;
+ if(next||practiceSet===null){let n=Math.floor(Math.random()*40);if(n===practiceSet)n=(n+1)%40;practiceSet=n;}
+ const q=Sanctuary.question({setIndex:practiceSet,attempt:0,trials:[],resetUsed:false});
+ utility('sanctuary','다시 풀어 보기','균형의 성소 · 복습 (기록에 남지 않아요)');
+ const html=sanctuarySheet(q,{...p,resetUsed:true})
+  .replace(/<ol class="trial-progress"[\s\S]*?<\/ol>/,'<p class="practice-note">📖 복습 모드 · 정답을 맞혀도 틀려도 기록과 코드에는 영향이 없어요</p>')
+  .replace(/<p class="leave-warning">[\s\S]*?<\/p>/,'')
+  .replace(/시련 \d+ \/ 3 · 기록/,'복습 · 기록')
+  .replace(/<button id="trial-reset"[^>]*>[^<]*<\/button>/,'<button id="trial-next">다른 문제</button>')
+  .split('>답안 제출<').join('>정답 확인<').split('>나중에 도전<').join('>그만하기<');
+ $('utility-content').innerHTML=html;$('utility-dialog').scrollTop=0;$('utility-content').scrollTop=0;
+ $('trial-exit').onclick=closeUtility;
+ $('trial-next').onclick=()=>renderPracticeTrial(true);
+ const show=(ok)=>{const fb=$('trial-feedback');
+  fb.innerHTML=(ok?'✅ 정답입니다.':'❌ 아직 아니에요. 다시 풀어 보거나 풀이를 확인하세요. <button id="trial-solution">풀이 보기</button>')+(ok&&q.solution?'<br><small>'+q.solution+'</small>':'');
+  if(!ok)$('trial-solution').onclick=()=>{fb.innerHTML='정답: <b>'+(q.exact||q.answer)+'</b>'+(q.solution?'<br><small>'+q.solution+'</small>':'');};};
+ $('trial-submit').onclick=()=>{
+  const n=Sanctuary.value($('trial-answer').value);
+  if(n===null){$('trial-feedback').textContent='숫자 또는 분수로 입력해 주세요. 예: 0.5, 1/2';return;}
+  show(Math.abs(n-q.answer)<=1e-8*Math.max(1,Math.abs(q.answer)));
  };
 }
 $('sanctuary-open').onclick=openSanctuaryJournal;
