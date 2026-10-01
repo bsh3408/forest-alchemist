@@ -572,9 +572,21 @@ async function showClearance(){
  try{const preview=studentSession?.role==='teacher';const record=preview?Clearance.preview():await Clearance.issue(state,studentSession);
  $('clearance-title').textContent=preview?'클리어 화면 미리보기':'3가지 시련 완수';$('clearance-dialog').classList.add('trial-code-reveal');
  $('clearance-account').textContent='아이디 · '+studentSession.username;
- $('clearance-code').textContent=record.code;
- $('clearance-status').textContent=preview?'교사용 테스트 코드입니다. 수행평가에는 사용할 수 없습니다.':'3가지 시련을 모두 통과했습니다. 현재 코드는 로컬 기록용이며 연구소 서버 인증은 아직 연결되지 않았습니다.';
- const leave=state.integrity||{};$('clearance-status').textContent+=' · 창 이탈 '+(leave.leaves||0)+'회(누적 '+Math.round((leave.awayMs||0)/1000)+'초)';$('clearance-feedback').textContent='';$('clearance-dialog').showModal();
+ $('clearance-status').textContent=preview?'교사용 테스트 코드입니다. 수행평가에는 사용할 수 없습니다.':'3가지 시련을 모두 통과했습니다. 연구소 22단원(숲속의 연금술사)에 이 코드를 입력하면 수행평가 +1점입니다.';
+ const leave=state.integrity||{};$('clearance-status').textContent+=' · 창 이탈 '+(leave.leaves||0)+'회(누적 '+Math.round((leave.awayMs||0)/1000)+'초)';$('clearance-feedback').textContent='';
+ // 오프라인 확인 시험 경고(2026-10-01 교사 요청, Claude Code): 경고를 크게 보여 주고 3초 뒤에 코드를 드러낸다.
+ // 경고 칸은 index.html의 클리어 대화상자 안(#clearance-warning)에 미리 들어 있다.
+ const warn=$('clearance-warning');
+ warn.style.cssText='margin:10px 0 12px;padding:16px 14px;border:3px solid #e0675a;border-radius:12px;background:rgba(192,57,43,.14);text-align:center;line-height:1.55';
+ warn.innerHTML='<div style="font-size:26px;font-weight:900;color:#ff8a7a">⚠️ 꼭 읽어 주세요</div>'+
+  '<div style="font-size:19px;font-weight:800;margin-top:8px"><b style="color:#ffb4a8">10월 19일~20일</b> 중화 반응 문제로 <b>오프라인 테스트</b>를 봅니다.<br>'+
+  '코드를 입력하고 테스트를 <b style="color:#ffb4a8">통과하지 못하면 부정행위로 간주</b>하여<br><b style="color:#ff8a7a;font-size:22px">수행평가 3점을 감점</b>합니다.</div>'+
+  '<div style="font-size:14px;margin-top:8px;opacity:.9">혼자 힘으로 풀지 않았다면 코드를 입력하지 마세요. 연구소의 코드 <b>입력과 취소는 모두 10월 8일에 마감</b>돼요.</div>';
+ $('clearance-code').textContent='3초 뒤에 코드가 나타납니다';$('clearance-copy').disabled=true;
+ $('clearance-dialog').showModal();
+ // setInterval 대신 setTimeout을 이어 붙인다(시험 도구가 setTimeout만 흉내 내므로 검사에서도 같은 흐름을 탄다).
+ let left=3;const tick=()=>{left--;if(left>0){$('clearance-code').textContent=left+'초 뒤에 코드가 나타납니다';setTimeout(tick,1000);return;}
+  $('clearance-code').textContent=record.code;$('clearance-copy').disabled=false;};setTimeout(tick,1000);
  }catch(e){state.clearancePresented=false;say('클리어 코드를 저장하지 못했습니다. 브라우저 저장 공간을 확인한 뒤 다시 시도해 주세요.',false,false);}
  finally{clearanceBusy=false;}
 }
