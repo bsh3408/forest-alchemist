@@ -107,9 +107,9 @@ function renderPracticeTrial(next){
  $('utility-content').innerHTML=html;$('utility-dialog').scrollTop=0;$('utility-content').scrollTop=0;
  $('trial-exit').onclick=closeUtility;
  $('trial-next').onclick=()=>renderPracticeTrial(true);
+ // 틀려도 바로 정답과 해설을 보여 준다(2026-10-01 교사 요청). 복습 모드라 기록에는 영향이 없다.
  const show=(ok)=>{const fb=$('trial-feedback');
-  fb.innerHTML=(ok?'✅ 정답입니다.':'❌ 아직 아니에요. 다시 풀어 보거나 풀이를 확인하세요. <button id="trial-solution">풀이 보기</button>')+(ok&&q.solution?'<br><small>'+q.solution+'</small>':'');
-  if(!ok)$('trial-solution').onclick=()=>{fb.innerHTML='정답: <b>'+(q.exact||q.answer)+'</b>'+(q.solution?'<br><small>'+q.solution+'</small>':'');};};
+  fb.innerHTML=(ok?'✅ 정답입니다.':'❌ 틀렸어요. 정답: <b>'+(q.exact||q.answer)+'</b>')+(q.solution?'<br><small><b>해설</b> '+q.solution+'</small>':'');};
  $('trial-submit').onclick=()=>{
   const n=Sanctuary.value($('trial-answer').value);
   if(n===null){$('trial-feedback').textContent='숫자 또는 분수로 입력해 주세요. 예: 0.5, 1/2';return;}
