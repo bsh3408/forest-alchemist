@@ -102,13 +102,15 @@ const finalResetBank=[
 {"version":9,"type":"exam-water-amount","reference":5,"intro":"표는 HCl, NaOH, KOH 수용액을 부피를 달리하여 혼합한 결과이다. 각 수용액의 농도는 각각 일정하지만 알려져 있지 않다. (가)와 (나)는 각각 별도로 혼합한 용액이다. 원그래프는 (가)에 존재하는 모든 이온 수의 비율을 이온의 종류를 구분하지 않고 나타낸 것이다.","headers":["혼합 용액","HCl(mL)","NaOH(mL)","KOH(mL)","전체 이온 수"],"conditions":"온도는 일정하다.","title":"이온 비율과 생성된 물의 양","rows":[["(가)",8,8,16,"8N"],["(나)",32,20,32,"미제시"]],"visual":{"kind":"pies","scope":"모든 이온 수의 비율","groups":[{"label":"(가)","parts":[[1,4],[1,4],[1,4],[1,4]]}]},"prompt":"(나)를 만드는 중화 반응에서 생성된 물 분자 수가 xN일 때, x의 값을 구하시오.","solution":"(가)에 네 종류의 이온이 같은 수로 존재하려면 Na⁺, K⁺, Cl⁻, OH⁻가 있어야 한다. 전체 이온 수가 8N이므로 각 이온 수는 2N이다. 따라서 HCl 8 mL의 H⁺ 수, NaOH 8 mL와 KOH 16 mL의 OH⁻ 수는 각각 2N이다. (나)를 만들 때 넣은 H⁺ 수는 8N이고, OH⁻ 수는 5N + 4N = 9N이다. H⁺와 OH⁻는 1:1로 반응하므로 둘 중 적은 수인 8N만큼 물 분자가 생성된다. 따라서 x=8이다.","answer":8.0,"exact":"8"},
 {"version":9,"type":"exam-cation-ratios","reference":6,"intro":"표는 HCl, NaOH, KOH 수용액을 부피를 달리하여 혼합한 결과이다. 각 수용액의 농도는 각각 일정하지만 알려져 있지 않다. (가)는 중성이다. 원그래프는 이온의 종류를 구분하지 않고 나타낸 것이다. 서로 다른 그래프에서 같은 비율이 반드시 같은 이온을 뜻하지는 않는다.","headers":["혼합 용액","HCl(mL)","NaOH(mL)","KOH(mL)","모든 양이온 수의 비율"],"conditions":"온도는 일정하며 x와 y는 양수이다.","title":"양이온 비율 속 두 부피","rows":[["(가)",8,8,8,"원그래프 참고"],["(나)","x",8,16,"원그래프 참고"],["(다)","x",8,"y","원그래프 참고"]],"visual":{"kind":"pies","scope":"모든 양이온 수의 비율","groups":[{"label":"(가)","parts":[[1,5],[4,5]]},{"label":"(나)","parts":[[1,6],[1,3],[1,2]]},{"label":"(다)","parts":[[1,3],[1,3],[1,3]]}]},"prompt":"x/y의 값을 구하시오.","solution":"(가)가 중성이므로 양이온은 Na⁺와 K⁺뿐이다. 두 염기의 농도 순서를 각각 가정하여 (나)의 양이온 비율 및 (다)의 세 양이온 수가 같다는 조건과 대조하면 NaOH:KOH=4:1만 가능하다. 각 수용액 8 mL가 제공하는 H⁺, OH⁻ 수를 각각 5N, 4N, 1N으로 놓는다. (다)의 Na⁺ 수는 4N이므로 K⁺와 H⁺도 각각 같은 수이다. 처음 넣은 H⁺는 12N이고 x=96/5 mL, y=32 mL이다. 따라서 x/y=3/5이다.","answer":0.6,"exact":"3/5"}
 ];
+const REMOVED_SETS=new Set([0,35]);
 function question(p){
  const assigned=Number.isInteger(p.setIndex)?p.setIndex:Math.abs(p.seed||0)%40;
  const attempt=Math.max(0,Math.floor(p.attempt||0));
  const completed=completedTrials(p),stage=Math.min(completed,2);
  let set=((assigned+11*stage+7*attempt+(p.resetUsed?(p.resetShift||1):0))%40+40)%40;
  const passedTypes=(p.trials||[]).map(t=>t.type==='exam-heat-remix'?'exam-water-amount':t.type);
- while(passedTypes.includes(finalBank[set].type))set=(set+1)%40;
+ // 2026-10-02 교사 요청: 1번·36번 문항은 출제하지 않는다. 같은 유형(5칸 뒤 문항)으로 넘긴다.
+ while(REMOVED_SETS.has(set)||passedTypes.includes(finalBank[set].type))set=REMOVED_SETS.has(set)?(set+5)%40:(set+1)%40;
  const q=JSON.parse(JSON.stringify((p.resetUsed?finalResetBank:finalBank)[set]));
  return {...q,id:'sanctuary-v9-'+String(set+1).padStart(2,'0')+'-'+attempt+(p.resetUsed?'-reset':'')+'-trial'+(stage+1),setNumber:set+1,trialNumber:stage+1,totalTrials:3};
 }
