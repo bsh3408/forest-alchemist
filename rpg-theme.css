@@ -484,3 +484,8 @@ button:not(.shop-guest) {translate:none;touch-action:manipulation}
 @media(prefers-reduced-motion:reduce) {
   button:not(.shop-guest):active:not(:disabled) {translate:none;transform:none}
 }
+
+/* 공개판: 창 이탈 표시 숨김 */
+.leave-badge,.leave-warning{display:none!important}
+.title-demo-note{margin:6px 0 14px;padding:10px 12px;border-radius:8px;background:#3a2a1466;color:#f3dfae;font-size:14px;line-height:1.6}
+#student-create{width:100%;margin-top:8px}

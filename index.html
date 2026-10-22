@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ko">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#172726"><title>숲속 연금술사 · 탐사와 발견</title><meta name="description" content="미확인 시료를 검증하며 숲과 광산을 탐사하고, 수용액을 준비해 손님의 반응 주문을 완성하세요."><link rel="stylesheet" href="style.css?v=1790648421"><link rel="stylesheet" href="rpg-theme.css?v=1790648421"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#172726"><title>숲속 연금술사</title><meta name="description" content="미확인 시료를 검증하며 숲과 광산을 탐사하고, 수용액을 준비해 손님의 반응 주문을 완성하세요."><link rel="stylesheet" href="style.css?v=1790648421"><link rel="stylesheet" href="rpg-theme.css?v=1790648421"></head>
 <body>
 <dialog id="business-announcement" aria-labelledby="business-title" aria-describedby="business-subtitle" tabindex="-1"><div class="business-card"><span id="business-emblem" class="business-emblem" aria-hidden="true">✦</span><p id="business-day" class="overline"></p><h2 id="business-title"></h2><div class="business-divider" aria-hidden="true"><span>◆</span></div><p id="business-subtitle"></p></div></dialog>
 <div id="gather-hit-lock" hidden aria-hidden="true"></div>
@@ -8,11 +8,11 @@
 <dialog id="login-dialog" class="title-screen" aria-labelledby="login-title">
 <div class="title-panel"><p class="title-eyebrow">THE FOREST ALCHEMIST</p><h1 id="login-title">숲속<br><span>연금술사</span></h1><p class="title-story">숲에서 발견하고, 반응으로 밝혀내는<br>나만의 연금술 이야기</p>
 <form id="student-login-form">
-<div class="login-field"><label for="student-username">아이디 <small>이름 + 반</small></label><input id="student-username" name="username" autocomplete="off" placeholder="예: 변석환5" maxlength="30" required spellcheck="false"></div>
-<div class="login-field"><label for="student-password">비밀번호 <small>학번</small></label><input id="student-password" name="password" type="password" inputmode="numeric" autocomplete="off" placeholder="학번 5자리" minlength="4" maxlength="5" required></div>
+<div class="login-field"><label for="student-username">아이디 <small>직접 정해요 · 2~20자</small></label><input id="student-username" name="username" autocomplete="username" placeholder="예: 연금술사123" maxlength="20" required spellcheck="false"></div>
+<div class="login-field"><label for="student-password">비밀번호 <small>직접 정해요 · 4자 이상</small></label><input id="student-password" name="password" type="password" autocomplete="current-password" placeholder="비밀번호" minlength="4" maxlength="40" required></div>
 <p id="login-error" role="status" aria-live="polite"></p>
-<button id="student-login-submit" type="submit" class="primary">연금술 여정 시작하기 <span>→</span></button>
-</form><p class="title-footnote">1학년 전용 · 반 번호는 앞에 0을 붙이지 않아요</p></div></dialog>
+<button id="student-login-submit" type="submit" class="primary">이어하기 <span>→</span></button><button id="student-create" type="button" class="secondary">처음이에요 · 새 아이디 만들기</button>
+</form><p class="title-footnote">아이디와 진행 기록은 이 기기의 이 브라우저에만 저장돼요. 다른 기기에서는 새로 만들어야 해요.</p></div></dialog>
 <div class="app">
 <header><div class="brand"><h1 id="brand-name">숲속 연금술사</h1><span id="day">첫째 날 · 오전 탐사</span></div><span id="leave-badge" class="leave-badge" hidden title="게임 창을 벗어난 횟수">창 이탈 0회</span><div id="energy-hud" class="energy-hud" aria-label="남은 행동력"><div><span>행동력</span><strong id="energy">80 <small>/ 80</small></strong></div><div class="meter"><div id="energy-fill"></div><div id="energy-loss-trail" hidden aria-hidden="true"></div></div></div><button id="return-scroll" class="return-scroll" title="20C를 사용해 안전하게 귀환합니다">탐사 종료 · 귀환서 <small>20C</small></button><span class="wallet" id="wallet" hidden><b id="money">0 C</b></span><button id="bag-button" class="bag-button" aria-haspopup="dialog">가방 <b id="bag-count">0 / 12</b><kbd>E</kbd></button><button class="text-button" id="sanctuary-open" hidden>특별의뢰</button><button class="text-button" id="clearance-open" hidden>클리어 코드</button><button class="text-button" id="restart">새로 시작</button></header>
 <main class="scene">
@@ -28,4 +28,4 @@
 <dialog id="clearance-dialog" aria-labelledby="clearance-title"><p class="overline">THE FOREST ALCHEMIST</p><h2 id="clearance-title">균형의 연금술사</h2><p id="clearance-account"></p><p id="clearance-status"></p><div id="clearance-warning"></div><output id="clearance-code" class="clearance-code"></output><p id="clearance-feedback" role="status"></p><div class="button-row"><button id="clearance-copy" class="primary">코드 복사</button><button id="clearance-close" class="secondary">닫기</button></div></dialog>
 <dialog id="restart-dialog" aria-labelledby="restart-title"><h2 id="restart-title">새로운 첫날을 시작할까요?</h2><p>일자·탐사·매출·특별의뢰 물품이 모두 초기화됩니다.</p><div class="button-row"><button id="cancel-restart" class="secondary">계속 플레이</button><button id="confirm-restart" class="primary">새로 시작</button></div></dialog>
 <script src="student-roster.js?v=1790648421"></script><script src="student-login.js?v=1790648421"></script><script src="clearance.js?v=1790648421"></script><script src="sanctuary.js?v=2026100201"></script><script src="engine.js?v=1790648421"></script><script src="art.js?v=1790648421"></script><script src="game.js?v=2026100105"></script><script src="sanctuary-ui.js?v=2026100104"></script><script src="session-guard.js?v=1790648421"></script>
-</body></html>
+<script>document.getElementById('student-create').onclick=()=>{const f=document.getElementById('student-login-form');if(!f.reportValidity())return;StudentGate.mode='create';f.requestSubmit();};</script></body></html>

@@ -557,13 +557,13 @@ $('student-login-form').addEventListener('submit',async e=>{
  e.preventDefault();const button=$('student-login-submit');if(button.disabled)return;
  button.disabled=true;button.textContent='확인 중…';$('login-error').textContent='';
  try{const student=await StudentGate.verify($('student-username').value,$('student-password').value);
- if(!student){$('login-error').textContent='아이디와 학번을 다시 확인해 주세요.';$('student-password').value='';$('student-password').focus();return;}
+ if(!student){$('login-error').textContent=StudentGate.lastError||'아이디와 비밀번호를 다시 확인해 주세요.';$('student-password').value='';$('student-password').focus();return;}
  if(window.SessionGuard&&!SessionGuard.isAllowed(student)&&(SessionGuard.isClosed(student)||(student.role!=='teacher'&&!SessionGuard.isOpen()))){$('login-error').textContent=SessionGuard.closedMessage();$('student-password').value='';return;}
  const restored=typeof sanctuaryRestore==='function'&&sanctuaryRestore(student);
  if(!restored&&student.role!=='teacher'&&window.Clearance?.clearSaved)await window.Clearance.clearSaved(student);
  studentSession=student;$('student-password').value='';$('login-dialog').close();if(restored){render();canvas.focus({preventScroll:true});}else showNameDialog();
  }catch(error){$('login-error').textContent='로그인을 확인하지 못했습니다. 파일을 다시 열어 주세요.';}
- finally{button.disabled=false;button.textContent='연금술 여정 시작하기 →';}
+ finally{button.disabled=false;button.textContent='이어하기 →';}
 });
 
 let clearanceBusy=false;
@@ -572,20 +572,14 @@ async function showClearance(){
  try{const preview=studentSession?.role==='teacher';const record=preview?Clearance.preview():await Clearance.issue(state,studentSession);
  $('clearance-title').textContent=preview?'클리어 화면 미리보기':'3가지 시련 완수';$('clearance-dialog').classList.add('trial-code-reveal');
  $('clearance-account').textContent='아이디 · '+studentSession.username;
- $('clearance-status').textContent=preview?'교사용 테스트 코드입니다. 수행평가에는 사용할 수 없습니다.':'3가지 시련을 모두 통과했습니다. 연구소 22단원(숲속의 연금술사)에 이 코드를 입력하면 수행평가 +1점입니다.';
- const leave=state.integrity||{};$('clearance-status').textContent+=' · 창 이탈 '+(leave.leaves||0)+'회(누적 '+Math.round((leave.awayMs||0)/1000)+'초)';$('clearance-feedback').textContent='';
+ $('clearance-status').textContent='3가지 시련을 모두 통과했습니다. 완주 기념 코드입니다.';
+ $('clearance-feedback').textContent='';
  // 오프라인 확인 시험 경고(2026-10-01 교사 요청, Claude Code): 경고를 크게 보여 주고 3초 뒤에 코드를 드러낸다.
  // 경고 칸은 index.html의 클리어 대화상자 안(#clearance-warning)에 미리 들어 있다.
- const warn=$('clearance-warning');
- warn.style.cssText='margin:10px 0 12px;padding:16px 14px;border:3px solid #e0675a;border-radius:12px;background:rgba(192,57,43,.14);text-align:center;line-height:1.55';
- warn.innerHTML='<div style="font-size:26px;font-weight:900;color:#ff8a7a">⚠️ 꼭 읽어 주세요</div>'+
-  '<div style="font-size:19px;font-weight:800;margin-top:8px"><b style="color:#ffb4a8">10월 19일~20일</b> 중화 반응 문제로 <b>오프라인 테스트</b>를 봅니다.<br>'+
-  '코드를 입력하고 테스트를 <b style="color:#ffb4a8">통과하지 못하면 부정행위로 간주</b>하여<br><b style="color:#ff8a7a;font-size:22px">수행평가 3점을 감점</b>합니다.</div>'+
-  '<div style="font-size:14px;margin-top:8px;opacity:.9">혼자 힘으로 풀지 않았다면 코드를 입력하지 마세요. 연구소의 코드 <b>입력과 취소는 모두 10월 8일에 마감</b>돼요.</div>';
- $('clearance-code').textContent='3초 뒤에 코드가 나타납니다';$('clearance-copy').disabled=true;
+ $('clearance-warning').hidden=true;$('clearance-code').textContent='';$('clearance-copy').disabled=true;
  $('clearance-dialog').showModal();
  // setInterval 대신 setTimeout을 이어 붙인다(시험 도구가 setTimeout만 흉내 내므로 검사에서도 같은 흐름을 탄다).
- let left=3;const tick=()=>{left--;if(left>0){$('clearance-code').textContent=left+'초 뒤에 코드가 나타납니다';setTimeout(tick,1000);return;}
+ let left=1;const tick=()=>{left--;if(left>0){$('clearance-code').textContent=left+'초 뒤에 코드가 나타납니다';setTimeout(tick,1000);return;}
   $('clearance-code').textContent=record.code;$('clearance-copy').disabled=false;};setTimeout(tick,1000);
  }catch(e){state.clearancePresented=false;say('클리어 코드를 저장하지 못했습니다. 브라우저 저장 공간을 확인한 뒤 다시 시도해 주세요.',false,false);}
  finally{clearanceBusy=false;}
